@@ -135,6 +135,13 @@ Chapters without sub-sections (e.g., "7 Daftar sebaran mata kuliah tiap semester
 - Second stage: cross-encoder reranker scores each candidate
 - Final threshold: score > 0.0
 
+### Score Fields
+
+- `matched_children[].retrieval_score` is the first-stage child hit score.
+- `retrieval_score` on the parent is the best first-stage score among its matched children.
+- `reranker_score` is present only when reranker mode scores the hydrated parent result.
+- `final_score` is the score used for final ranking. The legacy `score` field mirrors `final_score` for compatibility.
+
 ## 4. Configuration
 
 | Parameter | Default | Description |

@@ -24,6 +24,7 @@ class SearchOperations:
     _RRF_RELATIVE_KEEP_RATIO = 0.5
     _RERANKER_FINAL_SCORE_THRESHOLD = 0.0
     _MAX_RERANKER_CHILDREN = 3
+    _SEARCH_RESULT_SCHEMA_VERSION = "score-fields-v2"
     _POLICY_RULE_MARKERS = (
         "dapat dilakukan setelah",
         "tidak dapat",
@@ -187,6 +188,8 @@ class SearchOperations:
             "text": parent_text,
             "parent_text": parent_text,
             "child_text": payload.get("text", ""),
+            "final_score": result_score,
+            "retrieval_score": result_score,
             "score": result_score,
             "vector_score": vector_score if vector_score is not None else result_score,
             "bm25_score": bm25_score,
@@ -218,7 +221,10 @@ class SearchOperations:
         matched_child: dict[str, Any],
     ) -> None:
         """Merge another child hit into an already hydrated parent result."""
-        parent["score"] = max(parent["score"], result_score)
+        current_retrieval_score = float(parent.get("retrieval_score", parent["score"]))
+        parent["retrieval_score"] = max(current_retrieval_score, result_score)
+        parent["final_score"] = parent["retrieval_score"]
+        parent["score"] = parent["final_score"]
         parent["vector_score"] = max(
             parent["vector_score"],
             vector_score if vector_score is not None else result_score,
@@ -252,6 +258,7 @@ class SearchOperations:
         return {
             "chunk_id": payload.get("chunk_id", str(chunk_id)),
             "text": payload.get("text", ""),
+            "retrieval_score": score,
             "score": score,
             "section_id": payload.get("section_id"),
             "breadcrumb": payload.get("breadcrumb"),
@@ -288,7 +295,8 @@ class SearchOperations:
         ):
             result = dict(results[index])
             result["reranker_score"] = float(reranker_score)
-            result["score"] = float(reranker_score)
+            result["final_score"] = float(reranker_score)
+            result["score"] = result["final_score"]
             reranked.append(result)
         return reranked
 
@@ -475,6 +483,7 @@ class SearchOperations:
             (
                 f"{query}|{document_type.value if document_type else 'all'}|"
                 f"{top_k}|{score_threshold}|{self.retrieval_strategy}|"
+                f"{self._SEARCH_RESULT_SCHEMA_VERSION}|"
                 f"{self.reranker_model or 'none'}|{self.reranker_base_url or 'local'}|"
                 f"{self.reranker_candidate_multiplier}|"
                 f"{self._supports_bm25_vectors()}|{self._RRF_RANK_CONSTANT}|"

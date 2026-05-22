@@ -271,12 +271,11 @@ async def test_chat_service_returns_actual_workflow_intent():
         thread_id="session-1",
     )
 
-    assert response == ChatResponse(
-        response="Profil lulusan ada empat.",
-        thread_id="session-1",
-        intent="query_document",
-        documents_processed=0,
-    )
+    assert response.response == "Profil lulusan ada empat."
+    assert response.thread_id == "session-1"
+    assert response.intent == "query_document"
+    assert response.documents_processed == 0
+    assert response.id  # UUID is generated
 
 
 @pytest.mark.asyncio

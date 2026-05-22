@@ -189,7 +189,8 @@ class ResponseContextBuilder:
             matched_children = chunk.get("matched_children", [])
             breadcrumb = chunk.get("breadcrumb") or chunk.get("section_id") or "document"
             citation = f"{chunk['filename']} :: {breadcrumb}"
-            section_parts = [f"[{index}] {citation} (score: {chunk['score']:.2f})"]
+            final_score = float(chunk.get("final_score", chunk.get("score", 0.0)))
+            section_parts = [f"[{index}] {citation} (score: {final_score:.2f})"]
 
             child_evidence = self._render_child_evidence(matched_children)
             if child_evidence:
@@ -407,8 +408,8 @@ class CitationBuilder:
         return chunk.get("breadcrumb") or chunk.get("section") or chunk.get("section_id")
 
     def _score(self, chunk: dict[str, Any]) -> float | None:
-        """Normalize retrieval score when present."""
-        score = chunk.get("score")
+        """Normalize the final ranking score when present."""
+        score = chunk.get("final_score", chunk.get("score"))
         if score is None:
             return None
         try:

@@ -155,7 +155,7 @@ class RetrievalNode:
                     for query in queries
                 ]
             )
-            for query, query_results in zip(queries, query_results_list):
+            for query, query_results in zip(queries, query_results_list, strict=True):
                 merged_results = self._merge_results(merged_results, query_results, query)
 
             confidence, warning = self._score_retrieval_confidence(
@@ -321,11 +321,28 @@ class RetrievalNode:
                 existing.update(
                     {
                         "score": tagged.get("score"),
+                        "final_score": tagged.get("final_score", tagged.get("score")),
+                        "retrieval_score": tagged.get(
+                            "retrieval_score", existing.get("retrieval_score")
+                        ),
+                        "reranker_score": tagged.get(
+                            "reranker_score", existing.get("reranker_score")
+                        ),
                         "vector_score": tagged.get("vector_score", existing.get("vector_score")),
                         "bm25_score": tagged.get("bm25_score", existing.get("bm25_score")),
                         "rrf_score": tagged.get("rrf_score", existing.get("rrf_score")),
                         "matched_query": query_variant,
                     }
+                )
+            for score_field in ("retrieval_score", "vector_score", "bm25_score", "rrf_score"):
+                tagged_score = tagged.get(score_field)
+                if tagged_score is None:
+                    continue
+                existing_score = existing.get(score_field)
+                existing[score_field] = (
+                    tagged_score
+                    if existing_score is None
+                    else max(float(existing_score), float(tagged_score))
                 )
             existing_children = {
                 str(child.get("chunk_id") or child.get("text") or "")
@@ -524,6 +541,9 @@ class RetrievalNode:
     def _tag_result(self, result: dict[str, Any], query_variant: str | None) -> dict[str, Any]:
         """Attach the query variant that produced a result."""
         tagged = dict(result)
+        if "score" in tagged:
+            tagged.setdefault("final_score", tagged.get("score"))
+            tagged.setdefault("retrieval_score", tagged.get("vector_score", tagged.get("score")))
         if query_variant:
             tagged["matched_query"] = query_variant
         return tagged

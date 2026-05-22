@@ -1,0 +1,1493 @@
+{
+  "evaluation_type": "ragas_rag_eval",
+  "evaluation_date": "2026-05-11",
+  "dataset_id": "ragas_dataset_11051234.jsonl",
+  "sample_count": 30,
+  "metrics_tier": "core",
+  "aggregate_scores": {
+    "faithfulness": 0.6652,
+    "answer_relevancy": 0.5027,
+    "context_precision": 0.1571,
+    "context_recall": 0.0208
+  },
+  "per_sample": [
+    {
+      "id": "ragas_q1",
+      "question": "Min, kalau saya mau cuti akademik semester depan batas waktunya kapan ya? Terus harus bayar biaya apa aja?",
+      "scores": {
+        "faithfulness": 0.9091,
+        "answer_relevancy": 0.6046,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan Buku Panduan Akademik FT Unpas 2023–2024, berikut ketentuannya:\n\n- **Batas waktu pengajuan cuti akademik** untuk semester depan adalah **1 Juli – 30 September** [1].\n- **Biaya administrasi",
+      "retrieved_context_count": 2,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q2",
+      "question": "Kak, SKS maksimal yang bisa diambil buat semester 3 berapa ya kalau IPK semester kemarin 2.8?",
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.8454,
+        "context_precision": 1.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan buku Panduan Akademik FT Unpas 2023–2024, untuk semester III dan seterusnya, jumlah SKS maksimal yang dapat diambil ditentukan oleh **Indeks Prestasi Semester (IPS)** pada semester sebelum",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q3",
+      "question": "Gimana cara dapet transkrip nilai sementara buat daftar magang?",
+      "scores": {
+        "faithfulness": 0.5714,
+        "answer_relevancy": 0.9096,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak ada prosedur khusus yang menjelaskan cara mendapatkan **transkrip nilai sementara** untuk keperluan daftar magang. Informasi yang ada hanya mencakup transkrip ",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q4",
+      "question": "Kalau belum bayar cicilan UKT kedua, apa masih bisa ikut UTS?",
+      "scores": {
+        "faithfulness": 0.9,
+        "answer_relevancy": 0.5372,
+        "context_precision": 0.0,
+        "context_recall": 0.3333
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen panduan akademik, syarat untuk mengikuti Ujian Tengah Semester (UTS) adalah **telah menyelesaikan administrasi keuangan (DPP/SPP) minimal 50%** [2].  \n\nPembayaran DPP dilakukan dal",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "inference",
+        "noise_level": "high"
+      }
+    },
+    {
+      "id": "ragas_q5",
+      "question": "Mata kuliah pilihan di jurusan TI bisa diambil mulai semester berapa?",
+      "scores": {
+        "faithfulness": 0.25,
+        "answer_relevancy": 0.7054,
+        "context_precision": 0.2,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen kurikulum Teknik Informatika Unpas 2021, mata kuliah pilihan mulai tersedia pada **Semester V (semester 5)**, yaitu **Pilihan 1** (kode IF21P0XXX, 3 SKS) [2]. Selanjutnya, pada **S",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q6",
+      "question": "Syarat lulus S1 TI apa aja selain skripsi? Harus ada sertifikat TOEFL nggak?",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Maaf, saat ini tidak ada dokumen atau data yang berhasil diambil untuk menjawab pertanyaan Anda secara spesifik. Untuk mengetahui syarat kelulusan S1 Teknik Informatika selain skripsi dan apakah diper",
+      "retrieved_context_count": 0,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q7",
+      "question": "Bisa nggak ngulang matkul yang dapet nilai C buat benerin IPK?",
+      "scores": {
+        "faithfulness": 0.6,
+        "answer_relevancy": 0.8654,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik yang ada, **tidak diperbolehkan** mengulang mata kuliah yang sudah mendapat nilai **C** untuk memperbaiki IPK.  \n\nAturan yang tersedia menyebutkan:  \n- Mahasiswa dengan ni",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q8",
+      "question": "Cara lapor kalau ada jadwal kuliah yang bentrok gimana ya min?",
+      "scores": {
+        "faithfulness": 0.8889,
+        "answer_relevancy": 0.6489,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen yang ada, prosedur penanganan jadwal bentrok hanya dijelaskan secara spesifik untuk **matakuliah praktikum**, yaitu melalui prosedur **Pindah Jadwal Praktikum** [2]. Prosedur ini d",
+      "retrieved_context_count": 3,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "high"
+      }
+    },
+    {
+      "id": "ragas_q9",
+      "question": "Apa itu SKPI dan minimal poinnya berapa buat lulus?",
+      "scores": {
+        "faithfulness": 0.7,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen yang tersedia:\n\n**SKPI** (Surat Keterangan Pendamping Ijazah) adalah salah satu dokumen kelulusan yang berisi uraian tentang Capaian Pembelajaran Lulusan (CPL) Program Studi dan di",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q10",
+      "question": "Pengajuan beasiswa prestasi syaratnya apa aja?",
+      "scores": {
+        "faithfulness": 0.5833,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak ditemukan informasi spesifik mengenai syarat pengajuan **beasiswa prestasi**. Dokumen yang ada hanya mencakup:\n\n- **Syarat pengurus lembaga kemahasiswaan** (Pa",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q11",
+      "question": "Kalau DO (Drop Out) itu biasanya karena apa sih?",
+      "scores": {
+        "faithfulness": 0.7,
+        "answer_relevancy": 0.5268,
+        "context_precision": 0.5,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik Fakultas Teknik Unpas, **eksekusi akhir masa studi (DO)** dilakukan terhadap mahasiswa yang memenuhi salah satu kondisi berikut [2]:\n\n1. **Tidak aktif selama 4 semester be",
+      "retrieved_context_count": 4,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q12",
+      "question": "Boleh nggak pindah kelas paralel setelah kuliah jalan sebulan?",
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.5,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak ada informasi yang secara spesifik mengatur tentang perpindahan kelas paralel setelah perkuliahan berjalan satu bulan. Dokumen hanya membahas prosedur **pindah",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "inference",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q13",
+      "question": "Kak, alur ngurus surat pengantar magang atau KP (Kerja Praktik) gimana?",
+      "scores": {
+        "faithfulness": 0.7,
+        "answer_relevancy": 0.7338,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen panduan akademik Fakultas Teknik Unpas [1], berikut alur pengurusan surat pengantar untuk magang atau Kerja Praktek (KP):\n\n1. **Pastikan mata kuliah KP sudah tercantum** di Kartu R",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q14",
+      "question": "Syarat supaya bisa ikutan KKN (Kuliah Kerja Nyata) itu apa saja?",
+      "scores": {
+        "faithfulness": 0.875,
+        "answer_relevancy": 0.6003,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen panduan akademik Fakultas Teknik Unpas, KKN termasuk dalam program MBKM (Kuliah Kerja Nyata/Bina Desa). Oleh karena itu, syarat untuk mengikuti KKN mengikuti **persyaratan umum MBK",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q15",
+      "question": "UKT semester akhir bayarnya full atau bisa dapet potongan?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5634,
+        "context_recall": 0.0
+      },
+      "metric_errors": {
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, untuk mahasiswa yang sudah hanya tinggal Tugas Akhir (status 0 sks), **tidak dibayar penuh (full)** melainkan mendapatkan skema cicilan dengan persentase tertentu. B",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q16",
+      "question": "Cara pinjam buku di perpus pusat pakai apa ya, terus denda telatnya berapa?",
+      "scores": {
+        "context_recall": 0.0
+      },
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia [1], berikut informasi yang dapat diberikan:\n\n**Cara meminjam buku:**\n- Buku dari **koleksi kerja** (rak terbuka) dapat langsung diambil dan dibawa ke **bagian peminj",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q17",
+      "question": "Bisa nggak ngajuin cuti akademik dua semester berturut-turut?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan aturan cuti akademik di Fakultas Teknik Universitas Pasundan, **cuti akademik minimal adalah satu tahun akademik** (dua semester) dan maksimal dua tahun akademik [1]. Dengan demikian, meng",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "high"
+      }
+    },
+    {
+      "id": "ragas_q18",
+      "question": "Saya sakit kemarin 3 hari nggak masuk kuliah, cara urus izinnya ke siapa?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak ada prosedur khusus yang menjelaskan cara mengurus izin tidak masuk kuliah karena sakit selama 3 hari. Informasi yang ada hanya mencakup:\n\n- **Ujian susulan** ",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q19",
+      "question": "Mata kuliah MKDU (Mata Kuliah Dasar Umum) wajib lulus semua nggak ya?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen kurikulum yang tersedia, mata kuliah dengan kelompok **MKU (Mata Kuliah Umum)** — yang mencakup mata kuliah seperti Agama, Literasi Digital, Pendidikan Pancasila, dan Kewarganegara",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q20",
+      "question": "Kak, kalau KRS-an tapi dosen walinya susah dihubungi buat approve gimana?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan panduan akademik, proses perwalian (KRS) memang mensyaratkan diskusi dan persetujuan dari dosen wali. Jika dosen wali sulit dihubungi, berikut langkah yang bisa dilakukan sesuai prosedur y",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "high"
+      }
+    },
+    {
+      "id": "ragas_q21",
+      "question": "Buat ikut sidang skripsi minimal harus hadir berapa kali di seminar proposal temen?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak ditemukan informasi mengenai syarat minimal kehadiran di seminar proposal teman untuk dapat mengikuti sidang skripsi. Dokumen hanya membahas alur umum Tugas Ak",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q22",
+      "question": "Gimana prosedur minta keringanan bayar UKT karena ortu kena PHK?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak ada informasi spesifik mengenai prosedur pengajuan keringanan UKT karena orang tua terkena PHK. Dokumen yang ada hanya membahas cuti akademik, dana kemahasiswa",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q23",
+      "question": "Absensi minimal biar bisa ikut UAS itu berapa persen ya? Kalau kurang gimana?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen [1], syarat untuk dapat mengikuti Ujian Akhir Semester (UAS) adalah:\n\n- Telah menyelesaikan administrasi keuangan (DPP/SPP) 100%.\n- Telah terlibat dalam perkuliahan sekurang-kurang",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q24",
+      "question": "Lupa password akun SITUn buat KRS-an nih min, harus reset ke mana?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Maaf, informasi mengenai prosedur reset password akun SITU tidak tersedia dalam dokumen yang saya miliki. Untuk masalah teknis seperti lupa password, sebaiknya Anda menghubungi **bagian layanan IT aka",
+      "retrieved_context_count": 3,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "high"
+      }
+    },
+    {
+      "id": "ragas_q25",
+      "question": "Kalau nilai mata kuliah pilihan dapet D, apa wajib diulang atau boleh diganti yang lain?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan Buku Panduan Akademik FT Unpas, jika Anda mendapatkan nilai **D** pada suatu mata kuliah (termasuk mata kuliah pilihan), Anda **wajib mengikuti masa remedial** (Pekan Remed Ganjil). Setela",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "medium",
+        "reasoning_type": "inference",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q26",
+      "question": "Ada batas waktu gak buat nyelesain revisi skripsi habis sidang?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, **ada batas waktu untuk menyelesaikan revisi skripsi setelah sidang**. Jika pengumpulan revisi melewati batas waktu yang ditentukan, maka akan ada **eksekusi penurun",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q27",
+      "question": "Surat keterangan mahasiswa aktif buat ngurus BPJS minta di mana?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, prosedur pembuatan surat keterangan (termasuk surat keterangan mahasiswa aktif) dilakukan di bagian kepegawaian fakultas. Secara umum, langkahnya adalah:\n\n1. Mengisi",
+      "retrieved_context_count": 4,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q28",
+      "question": "Organisasi BEM tingkat fakultas pendaftarannya buka kapan aja?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak terdapat informasi spesifik mengenai jadwal atau periode pendaftaran (pembukaan) untuk organisasi BEM tingkat fakultas. Dokumen hanya mengatur prosedur pembent",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q29",
+      "question": "Sanksinya apa kalau ketahuan malsuin tanda tangan dosen wali di KRS?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, **pemalsuan tanda tangan dosen wali di KRS tidak disebutkan secara eksplisit** sebagai jenis pelanggaran tersendiri. Namun, pemalsuan dokumen akademik termasuk dalam",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q30",
+      "question": "Kalau nilai dari dosen belum keluar di KHS, padahal udah batas akhir, mahasiswa bisa apa?",
+      "scores": {},
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed.",
+        "answer_relevancy": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_precision": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed or the metric could not complete successfully.",
+        "context_recall": "Metric returned null/NaN from RAGAS, typically because the evaluator output could not be parsed into the expected attribution structure."
+      },
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak ada prosedur khusus yang menjelaskan langkah yang dapat ditempuh mahasiswa jika nilai belum keluar di KHS meskipun sudah melewati batas akhir. Namun, ada beber",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "inference",
+        "noise_level": "high"
+      }
+    }
+  ],
+  "openrouter_usage": {
+    "request_count": 221,
+    "llm_request_count": 191,
+    "embedding_request_count": 30,
+    "prompt_tokens": 490673,
+    "completion_tokens": 144047,
+    "total_tokens": 634720,
+    "cost_usd_reported": 0.080208104,
+    "cost_fields": [
+      {
+        "kind": "llm",
+        "cost_usd": 0.00040306
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00080738
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00080528
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00068824
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00062062
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00019684
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000959
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00054922
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00082054
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00058198
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00064134
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00093268
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00089978
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00069174
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00076118
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00061488
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00066458
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0006657
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00072128
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00091028
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00066248
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00071442
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00079254
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0003304
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00077924
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0007868
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0005033
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00048538
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00071946
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00079282
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001351
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.0672e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011424
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000160244
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0006776
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00020874
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.2632e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.6012e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00015778
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000119
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00151732
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.2632e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000137424
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00047754
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000132692
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.1e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011046
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000241864
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00013104
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000131852
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000237132
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00042812
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 7.2e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.5e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 9.9e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00127932
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 9.5e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00023366
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00013762
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000600264
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000182112
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.1e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001274
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000133168
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00024822
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00015134
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00013678
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00022176
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00128142
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000826392
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000244216
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00060998
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00054376
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000148652
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011186
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00018676
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000165648
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000444108
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.9876e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00016926
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1e-06
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00053452
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00025438
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000140196
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012376
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.7892e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000216972
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000532672
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.02e-06
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000157108
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000134372
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.4e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00020468
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 7.4e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000169372
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000500948
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000122416
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.7132e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000152124
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000179424
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002086
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00021938
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000313628
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012278
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.2092e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000153636
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000830368
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.1e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 6.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000111608
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00023156
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.0196e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00090594
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000143556
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000267092
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012236
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00109802
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012278
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000120036
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000873068
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.8e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0007119
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00015302
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 6e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000122164
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.4976e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000168868
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.3332e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012012
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000859628
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000801472
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000404628
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000194012
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.9772e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.6e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000177296
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000104496
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00014896
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8.5e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000234024
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000164304
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.6e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000138236
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000509292
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002422
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000109312
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00013902
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.3e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000147056
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00015316
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8.3e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00032858
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000508172
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00125034
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000427
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001263304
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000111748
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000116508
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.4872e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000180264
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00020902
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00149142
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000167132
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.6272e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000114156
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000398384
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001239532
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00020636
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.7e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.5992e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.01e-06
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000205044
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000129864
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.3e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 9.3e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012544
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00129444
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000133924
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000797776
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00021966
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000570416
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00018508
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.002037672
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00016856
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.9712e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000141092
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00013944
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.7e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000160524
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 6.8e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000186732
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000136052
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000701512
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001321432
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001013292
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000144284
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000207032
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000665392
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00020146
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000116788
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000136696
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00019852
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000154952
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002863
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00141848
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000377132
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000124628
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000149632
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000720804
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000701456
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000607012
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001311296
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000962164
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001019116
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00166908
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001141392
+      }
+    ]
+  },
+  "config": {
+    "evaluator_llm": "deepseek/deepseek-v4-flash:exacto",
+    "evaluator_embedding": "qwen/qwen3-embedding-8b:nitro",
+    "k_eval": 5,
+    "retrieval_strategy": "reranker",
+    "mode": "live",
+    "openrouter_min_interval_seconds": 0.3,
+    "openrouter_jitter_seconds": 0.15,
+    "openrouter_max_retries": 6,
+    "openrouter_backoff_base_seconds": 2.0
+  }
+}
