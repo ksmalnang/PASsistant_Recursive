@@ -1084,8 +1084,11 @@ async def test_search_similar_hydrates_parent_context_and_deduplicates(tmp_path,
     assert results[0]["section_id"] == "bab_ii.pasal_3"
     assert results[0]["text"].startswith("Pasal 3 Absensi")
     assert results[0]["score"] == pytest.approx(0.93)
+    assert results[0]["final_score"] == pytest.approx(0.93)
+    assert results[0]["retrieval_score"] == pytest.approx(0.93)
     assert len(results[0]["matched_children"]) == 2
     assert results[0]["matched_children"][0]["section_id"] == "bab_ii.pasal_3.ayat_2"
+    assert results[0]["matched_children"][0]["retrieval_score"] == pytest.approx(0.93)
 
     cached_results = await vector_tools.search_similar(
         query="berapa batas izin tidak masuk sekolah?",
@@ -1227,6 +1230,9 @@ async def test_search_similar_supports_reranker_strategy(tmp_path, monkeypatch):
         "bab_i.pasal_1",
     ]
     assert results[0]["reranker_score"] == pytest.approx(0.97)
+    assert results[0]["final_score"] == pytest.approx(0.97)
+    assert results[0]["retrieval_score"] == pytest.approx(0.82)
+    assert results[0]["matched_children"][0]["retrieval_score"] == pytest.approx(0.82)
     assert results[0]["vector_score"] == pytest.approx(0.82)
     assert results[1]["reranker_score"] == pytest.approx(0.08)
 

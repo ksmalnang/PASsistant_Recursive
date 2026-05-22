@@ -1,5 +1,6 @@
 """Pydantic models for the API layer."""
 
+import uuid
 from datetime import datetime
 from typing import Any, Literal
 
@@ -22,6 +23,10 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     """Chat response payload."""
 
+    id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
+        description="Unique message identifier",
+    )
     response: str = Field(description="Agent response text")
     thread_id: str = Field(description="Thread identifier")
     intent: str | None = Field(default=None, description="Classified intent")

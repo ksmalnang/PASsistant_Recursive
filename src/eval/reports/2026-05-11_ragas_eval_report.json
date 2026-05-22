@@ -1,0 +1,2190 @@
+{
+  "evaluation_type": "ragas_rag_eval",
+  "evaluation_date": "2026-05-11",
+  "dataset_id": "ragas_dataset_11051234.jsonl",
+  "sample_count": 30,
+  "metrics_tier": "core",
+  "aggregate_scores": {
+    "faithfulness": 0.7551,
+    "answer_relevancy": 0.6814,
+    "context_precision": 0.8435,
+    "context_recall": 0.8333
+  },
+  "per_sample": [
+    {
+      "id": "ragas_q1",
+      "question": "Min, kalau cuti akademik itu boleh berapa lama ya? Sama biayanya berapa?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5835,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan aturan akademik di Fakultas Teknik Unpas [1]:\n\n- **Lama cuti akademik**: minimal **1 tahun akademik** dan maksimal **2 tahun akademik**.\n- **Biaya administrasi cuti**: sebesar **5% dari DP",
+      "retrieved_context_count": 4,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q2",
+      "question": "Kalo nilai UTS jelek dan nilai akhir dapat D, apa bisa ikut remedial? Maksimal dapet nilai apa?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5645,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik [1], mahasiswa yang mendapatkan nilai **D** (atau B, BC, C, E) pada semester aktif **dapat mengikuti pekan remedial** (remed ganjil). Nilai maksimal yang dapat diperoleh s",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q3",
+      "question": "Saya IPK nya 3.1 nih kak, semester depan bisa ambil berapa SKS maksimal?",
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.9386,
+        "context_precision": 1.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan ketentuan akademik, jika IPK Anda **3,1** (lebih dari 3,0), maka maksimal SKS yang dapat diambil pada semester depan adalah **24 SKS** [1][2].\n\nSources:\n[1] Wadek1-Buku Panduan Akademik FT",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q4",
+      "question": "Kak, kalau ketahuan nyontek pas ujian itu masuk pelanggaran apa ya, sanksinya apa?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6784,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik Fakultas Teknik Unpas, **menyontek saat ujian termasuk dalam kategori pelanggaran ringan**[1]. Sanksi untuk pelanggaran ringan adalah **diberikan surat peringatan**[1].\n\nS",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q5",
+      "question": "Syarat buat ikut ujian susulan gimana min? Kalo telat 5 hari ngajuinnya masih bisa ga?",
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.7507,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen [1], syarat untuk mengikuti **Ujian Susulan** adalah sebagai berikut:\n\n1. Mahasiswa yang pada jadwal ujian sedang dirawat/inap (ada surat keterangan dari rumah sakit).  \n2. Mahasis",
+      "retrieved_context_count": 2,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "inference",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q6",
+      "question": "Apa bedanya Fully MBKM sama Partially MBKM kak?",
+      "scores": {
+        "faithfulness": 0.8889,
+        "answer_relevancy": 0.9334,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen panduan akademik [1], perbedaan utama antara **Fully MBKM** dan **Partially MBKM** adalah:\n\n| Aspek | Fully MBKM | Partially MBKM |\n|-------|------------|----------------|\n| **Kegi",
+      "retrieved_context_count": 2,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "comparison",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q7",
+      "question": "Min, kalau aku udah 4 semester berturut-turut nggak aktif kuliah, apa langsung di-DO?",
+      "scores": {
+        "answer_relevancy": 0.7503,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed."
+      },
+      "response_preview": "Berdasarkan aturan di lingkungan Fakultas Teknik Universitas Pasundan, **ya, Anda dapat terkena eksekusi akhir masa studi (dinyatakan mengundurkan diri/keluar)** jika tidak aktif selama 4 semester ber",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q8",
+      "question": "SKS minimal buat lulus jurusan teknik informatika berapa ya kak? Terus syarat IPK nya berapa?",
+      "scores": {
+        "answer_relevancy": 0.6085,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed."
+      },
+      "response_preview": "Berdasarkan Buku Panduan Akademik Fakultas Teknik Unpas, syarat kelulusan untuk program S1 (termasuk Teknik Informatika) adalah:\n\n- **IPK minimal 2,0** (dengan ketentuan IPK semua mata kuliah non-inti",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "high"
+      }
+    },
+    {
+      "id": "ragas_q9",
+      "question": "Kalau mau dapat predikat Cum Laude pas yudisium syarat IPK-nya berapa dan maksimal berapa tahun kuliahnya?",
+      "scores": {
+        "answer_relevancy": 0.7434,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {
+        "faithfulness": "Metric returned null/NaN from RAGAS, typically because no answer statements were extracted or the faithfulness judgment could not be completed."
+      },
+      "response_preview": "Berdasarkan dokumen akademik [1], untuk mendapatkan predikat **Dengan Pujian (Cum Laude)** saat yudisium, syaratnya adalah:\n\n- **IPK**: 3,51 ≤ IPK ≤ 4,00\n- **Masa studi**: ≤ 5 tahun (tidak lebih dari ",
+      "retrieved_context_count": 2,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q10",
+      "question": "Min, buat dapat beasiswa KIP Kuliah, penghasilan kotor ortu maksimal berapa ya?",
+      "scores": {
+        "faithfulness": 0.25,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak disebutkan secara spesifik batas maksimal penghasilan kotor orang tua untuk penerima beasiswa KIP Kuliah. Dokumen hanya menyebutkan bahwa syaratnya adalah **ke",
+      "retrieved_context_count": 1,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "single-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q11",
+      "question": "Kalo telat ngisi PRS (Perubahan Rencana Studi) gimana dampaknya ke KRS ku?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8285,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik yang ada [1], jika Anda terlambat melakukan PRS (Perubahan Rencana Studi), maka **KRS Anda tetap mengacu pada hasil rencana studi yang telah ditetapkan pada saat perwalian",
+      "retrieved_context_count": 2,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q12",
+      "question": "Bisa ga ya bikin acara BEM trus nginep di kampus? Syaratnya apa min?",
+      "scores": {
+        "faithfulness": 0.8462,
+        "answer_relevancy": 0.7703,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Bisa, asalkan mengajukan permohonan izin sesuai prosedur yang berlaku. Berdasarkan dokumen pedoman kemahasiswaan [1], berikut syarat dan langkah-langkahnya:\n\n1. **Jam malam** kegiatan lembaga kemahasi",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q13",
+      "question": "Kak, kalau nilai praktikum TIF ada yang salah itung, batas waktu buat ngajuin koreksi nilainya kapan?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7877,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen panduan akademik, koreksi nilai praktikum dapat diajukan **maksimal 1 semester setelah nilai tersebut keluar**. Misalnya, jika mata kuliah praktikum diambil pada semester ganjil 20",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q14",
+      "question": "Mata kuliah wajib nasional buat anak Informatika tuh apa aja sih? Minimal sks nya berapa?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7482,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen kurikulum [1], Mata Kuliah Wajib Nasional (MKWN) untuk Program Studi Informatika Universitas Pasundan terdiri dari **empat mata kuliah**, masing-masing dengan **bobot minimal 2 SKS",
+      "retrieved_context_count": 3,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q15",
+      "question": "Di prodi TIF, kalau aku ambil magang MBKM, matkul reguler apa aja yang masih tetep wajib diambil?",
+      "scores": {
+        "faithfulness": 0.3333,
+        "answer_relevancy": 0.7851,
+        "context_precision": 0.3333,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen panduan kurikulum [3], untuk kegiatan **Magang/Praktek Kerja** dalam program MBKM, mata kuliah reguler yang **tetap wajib diambil** (tidak dikonversi) adalah:\n\n- **Mata Kuliah Kerj",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q16",
+      "question": "Kak mau nanya, kalo aku ikut kegiatan PKM dari DIKTI, nanti dapat nilai tambahan buat SKPI ngga?",
+      "scores": {
+        "faithfulness": 0.8333,
+        "answer_relevancy": 0.7684,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik, **iya, kegiatan PKM dari DIKTI termasuk dalam komponen penilaian SKPM** yang nantinya menjadi lampiran SKPI.  \n\nDalam Buku Panduan Akademik FT Unpas 2023-2024 disebutkan ",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q17",
+      "question": "Gimana cara ngajuin proposal kegiatan buat ormawa fakultas? Dan batas waktunya kapan?",
+      "scores": {
+        "faithfulness": 0.8333,
+        "answer_relevancy": 0.7533,
+        "context_precision": 0.3333,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen yang tersedia, berikut prosedur pengajuan proposal kegiatan untuk Ormawa (FEMA/Himpunan Jurusan) di Fakultas Teknik Unpas:\n\n### Prosedur Pengajuan Proposal [2]\n\n1. **Pembuatan Prop",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q18",
+      "question": "Kalau udah bimbingan kerja praktek tapi habis itu aku ngilang ga aktif 2 semester, apakah bisa lanjutin bimbingan pake topik yg kemaren?",
+      "scores": {
+        "faithfulness": 0.25,
+        "answer_relevancy": 0.8652,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen panduan akademik, **tidak bisa** langsung melanjutkan dengan topik yang sama.\n\nAturan yang tercantum menyebutkan:\n\n> *\"Jika mahasiswa peserta kerja praktek sudah melakukan bimbinga",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "inference",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q19",
+      "question": "Kalau semester depan aku cuti kuliah, bayar administrasi cutinya itu kemana dan berapa persen dari DPP?",
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.6448,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik Fakultas Teknik Unpas, biaya administrasi cuti akademik adalah **sebesar 5% dari DPP satu tahun** [1].  \n\nMengenai tempat pembayaran, dokumen tidak menyebutkan secara spes",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q20",
+      "question": "Sanksi paling berat kalau mahasiswa ketahuan jadi joki ujian itu apa?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.695,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik Fakultas Teknik Unpas, menjadi joki ujian termasuk dalam **pelanggaran berat** [1]. Sanksi paling berat untuk pelanggaran berat adalah **skorsing perkuliahan maksimal 4 se",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q21",
+      "question": "Kak, kalau tinggal skripsi/tugas akhir doang, masih harus bayar tagihan BPA2DK ga biar bisa sidang?",
+      "scores": {
+        "faithfulness": 0.4444,
+        "answer_relevancy": 0.8325,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik, **status lunas biaya BPA2DK merupakan syarat untuk pengajuan proposal skripsi/tugas akhir** [1]. Biaya bimbingan dan sidang sudah termasuk dalam tagihan BPA2DK untuk maks",
+      "retrieved_context_count": 4,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "inference",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q22",
+      "question": "Nanti pas lulus, ijazah sama transkrip bayar lagi nggak buat legalisirnya?",
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.6057,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik [1], biaya pengurusan ijazah, transkrip, dan SKPI **sudah termasuk dalam biaya BPA2DK** untuk mahasiswa mulai angkatan 2022. Legalisir ijazah dan transkrip juga disediakan",
+      "retrieved_context_count": 4,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q23",
+      "question": "Akun email kampus pasundan (PasMail) itu batas capacity google drive nya berapa giga ya?",
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.7501,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik [1], akun Pasundan Mail (PasMail) memiliki **kapasitas penyimpanan tak terbatas (unlimited)** karena merupakan layanan Gmail Bisnis hasil kerja sama Teknik Informatika den",
+      "retrieved_context_count": 1,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q24",
+      "question": "Min, anak informatika wajib belajar budaya sunda nggak sih di kampus? Emang ada matkulnya?",
+      "scores": {
+        "faithfulness": 0.8462,
+        "answer_relevancy": 0.7462,
+        "context_precision": 0.8042,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen kurikulum yang tersedia, **wajib**. Mata kuliah **Ilmu Budaya Sunda** tercantum sebagai bagian dari kurikulum Program Studi Teknik Informatika Universitas Pasundan.\n\nDetail mata ku",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Kurikulum Teknik Informatika Unpas 2021 (versi Publik - Tanpa RPS).pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q25",
+      "question": "Apakah organisasi KOPMA dibentuk langsung sama pimpinan kampus?",
+      "scores": {
+        "faithfulness": 0.6,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen yang tersedia, tidak terdapat informasi yang menjelaskan proses pembentukan KOPMA (Koperasi Mahasiswa) atau apakah organisasi tersebut dibentuk langsung oleh pimpinan kampus. Dokum",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Buku Pedoman Kemahasiswaan.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q26",
+      "question": "Syarat lolos evaluasi akademik di akhir tahun kedua apa aja sih biar nggak di-DO?",
+      "scores": {
+        "faithfulness": 0.5455,
+        "answer_relevancy": 0.59,
+        "context_precision": 1.0,
+        "context_recall": 0.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan Buku Panduan Akademik FT Unpas 2023-2024, pada **Tahap I** evaluasi kinerja akademik di **Akhir Tahun Akademik II**, seorang mahasiswa akan terkena evaluasi jika memenuhi **kedua** kriteri",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "single-hop",
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "ragas_q27",
+      "question": "Kak, kalau absenku kurang, apa bisa pakai surat ijin sakit palsu buat nutupin absen? Sanksinya apa kalau ketahuan?",
+      "scores": {
+        "faithfulness": 0.6667,
+        "answer_relevancy": 0.6856,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Maaf, tidak bisa. Menggunakan surat izin sakit palsu untuk menutupi ketidakhadiran termasuk dalam **pelanggaran sedang** menurut aturan akademik. Pemalsuan bukti izin/sakit termasuk salah satu bentuk ",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "medium",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q28",
+      "question": "Biar bisa ikutan UTS syaratnya udah bayar uang kuliah berapa persen ya? Trus kehadiran kelas wajibnya berapa?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5887,
+        "context_precision": 0.8333,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Syarat mengikuti Ujian Tengah Semester (UTS):\n- Administrasi keuangan (DPP/SPP) harus sudah diselesaikan **50%**.\n- Kehadiran dalam perkuliahan minimal **75%** dari sesi dan aktivitas yang telah disel",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q29",
+      "question": "Min, di lab Teknik Lingkungan itu alatnya ada apa aja sih khusus buat ngecek kualitas air?",
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.6205,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik [1], **Laboratorium Kualitas Air** yang merupakan bagian dari Laboratorium Teknik Lingkungan dilengkapi dengan peralatan untuk analisis kualitas air, antara lain:\n\n- **Jar",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "easy",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "ragas_q30",
+      "question": "Kalo dapet status 0 SKS karena tinggal ngerjain TA, gimana alur prosedurnya buat perwalian itu?",
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.8254,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "metric_errors": {},
+      "response_preview": "Berdasarkan dokumen akademik [1], berikut alur prosedur bagi mahasiswa yang mendapatkan status **0 SKS** karena hanya tinggal mengerjakan Tugas Akhir (TA):\n\n1. **Fakultas dan Prodi** menetapkan mahasi",
+      "retrieved_context_count": 5,
+      "metadata": {
+        "source_file": "Wadek1-Buku Panduan Akademik FT Unpas 2023-2024 Publish.pdf",
+        "difficulty": "hard",
+        "reasoning_type": "multi-hop",
+        "noise_level": "low"
+      }
+    }
+  ],
+  "openrouter_usage": {
+    "request_count": 395,
+    "llm_request_count": 335,
+    "embedding_request_count": 60,
+    "prompt_tokens": 788556,
+    "completion_tokens": 229835,
+    "total_tokens": 1018391,
+    "cost_usd_reported": 0.11825376400000008,
+    "cost_fields": [
+      {
+        "kind": "llm",
+        "cost_usd": 0.00053242
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00075586
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00079562
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00049574
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00043106
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0003717
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0006342
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00089488
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00033194
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00036148
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00033782
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00076622
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00056952
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00051282
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0015148
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00081326
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00067452
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0006111
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00080682
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00071512
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00073822
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00059542
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00017766
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00067984
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00044744
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00079394
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000481824
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000559384
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00052318
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00070588
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010136
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00022036
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000118664
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010752
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011102
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00016394
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001155
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00106078
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000156492
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000366996
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010136
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011368
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011354
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00045346
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 4.8972e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00014322
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010556
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000254156
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011396
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.7e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000291956
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 6.6e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000556388
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000153468
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.7e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000145096
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8.5e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000177912
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 6.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00030674
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00024962
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000111692
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.4392e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1e-06
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00048496
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00048566
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00013216
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000137032
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00059206
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000210672
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.3832e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000173432
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000232932
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001106
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000434756
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.5792e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001267
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012012
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000142548
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011956
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.5e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000172676
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000153272
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000107688
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 5.7e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000368536
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 5.5e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00043722
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000119
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00071162
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000151984
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000292376
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.32e-06
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000136612
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.1812e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000743288
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000262388
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000181216
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001449
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.828e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00123886
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000101556
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000162064
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00055538
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012334
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.3772e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000229096
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0013468
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000498736
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010388
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000227808
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000292152
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000174832
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.6072e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000159152
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.576e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002597
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.4e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000201684
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000140868
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000129528
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000217
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00017822
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000651868
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00056882
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00059682
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000695576
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000458752
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00044478
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000618324
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00131404
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000956312
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 7.3e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.9e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8.1e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000112448
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011158
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.9296e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.6e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00043274
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 6.5e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010444
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000301896
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001113
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000109592
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00015064
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000202692
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00091658
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000134624
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000131432
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00073304
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010416
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000319088
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012964
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000220052
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001008
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000163492
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000139608
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001652
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001036
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.4612e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000190372
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.1e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00020608
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000140924
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000616812
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8.7e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.5e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000178752
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000151508
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 7e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000164108
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000328636
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000130172
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00015008
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000165816
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00181216
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000177408
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00063994
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.8652e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000220192
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001554
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00041622
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.4e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 9.8e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000279804
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000162288
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000159152
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.4612e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.6e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 4.8e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00014112
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000500248
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.4e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000190232
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000208096
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 7.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.7332e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000107492
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000259
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000199584
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000453376
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000443716
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00025074
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.7612e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000139188
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 6.8852e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000180348
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000996296
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00069048
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000478996
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000924336
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000230664
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000168952
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.6972e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000230104
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00139454
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 4.8e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00036694
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 9.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000248164
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000939232
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000122108
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000219408
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000429744
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012474
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001106
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000117068
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00029834
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000134344
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000805952
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012362
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00055902
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00035602
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00032676
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000158816
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001273272
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00033712
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00012586
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000271684
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00055832
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 7.9772e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.4e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000647668
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 7.7e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000131068
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00019516
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000171164
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000149324
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.0132e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011956
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000537964
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002625
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000145936
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.1172e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000234724
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.4e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000518252
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00018592
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00021854
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000356468
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011872
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 7.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000197932
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002226
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00033222
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010136
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000135184
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000987896
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001638
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00014434
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00038318
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 5.1352e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.7e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00040866
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.18e-06
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00019656
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000228844
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000219492
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002744
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 6.6192e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000671356
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001085644
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 2.6e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.2652e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000147588
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00016744
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000973784
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000106008
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000802732
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00010752
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002548
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000506492
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00013636
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011312
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00089838
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000136808
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000204512
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 7.8e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000130256
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000238672
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.3772e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00057036
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001611092
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.1e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000360304
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 9.1e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0005418
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000162568
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000153776
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000172116
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002044
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000158452
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000176652
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0002226
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000208432
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000417844
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000637
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00018214
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00060088
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 1.37e-06
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000118748
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000128044
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00150878
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000458696
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.226e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000101528
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00014084
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000112168
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.716e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00030114
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000229712
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000104188
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.45e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.548e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00123158
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00044702
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00029526
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00016632
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.618e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000415632
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 4.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000240352
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 9.296e-05
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000273952
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000227444
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.9e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00019166
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000200564
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 5.4e-07
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.3e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001348116
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000124012
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0003073
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 5.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001056412
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.002343936
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00042308
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00011564
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000154952
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000122108
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000177688
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000263508
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 8.5372e-05
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0001925
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000837312
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 3.4e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000124908
+      },
+      {
+        "kind": "embedding",
+        "cost_usd": 8.2e-07
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000151564
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000259924
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0004088
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000536676
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000333284
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000262332
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.0003857
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.00034818
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001907668
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.000833364
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001180312
+      },
+      {
+        "kind": "llm",
+        "cost_usd": 0.001115744
+      }
+    ]
+  },
+  "config": {
+    "evaluator_llm": "deepseek/deepseek-v4-flash:exacto",
+    "evaluator_embedding": "qwen/qwen3-embedding-8b:nitro",
+    "k_eval": 5,
+    "retrieval_strategy": "reranker",
+    "mode": "live",
+    "openrouter_min_interval_seconds": 0.3,
+    "openrouter_jitter_seconds": 0.15,
+    "openrouter_max_retries": 6,
+    "openrouter_backoff_base_seconds": 2.0
+  }
+}
