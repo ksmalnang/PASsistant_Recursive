@@ -386,6 +386,123 @@ class TestGLMOCRTool:
             await tool.extract_text(str(path))
 
 
+class TestHTMLTableParser:
+    """Tests for HTML table → Markdown conversion in GLMOCRTool."""
+
+    def test_simple_table_to_markdown(self):
+        html = (
+            "<table>"
+            "<tr><td>Name</td><td>Score</td></tr>"
+            "<tr><td>Alice</td><td>90</td></tr>"
+            "<tr><td>Bob</td><td>85</td></tr>"
+            "</table>"
+        )
+        result = GLMOCRTool._convert_html_table_to_markdown(html)
+        assert "| Name | Score |" in result
+        assert "| --- | --- |" in result
+        assert "| Alice | 90 |" in result
+        assert "| Bob | 85 |" in result
+
+    def test_table_with_th_headers(self):
+        html = (
+            "<table>"
+            "<thead><tr><th>Mata Kuliah</th><th>SKS</th></tr></thead>"
+            "<tbody>"
+            "<tr><td>Algoritma</td><td>3</td></tr>"
+            "<tr><td>Basis Data</td><td>3</td></tr>"
+            "</tbody>"
+            "</table>"
+        )
+        result = GLMOCRTool._convert_html_table_to_markdown(html)
+        assert "| Mata Kuliah | SKS |" in result
+        assert "| Algoritma | 3 |" in result
+        assert "| Basis Data | 3 |" in result
+
+    def test_table_with_colspan(self):
+        html = (
+            "<table>"
+            "<tr><td colspan='2'>Merged Header</td></tr>"
+            "<tr><td>A</td><td>B</td></tr>"
+            "</table>"
+        )
+        result = GLMOCRTool._convert_html_table_to_markdown(html)
+        lines = result.strip().split("\n")
+        assert lines[0].count("|") >= 3
+        assert "Merged Header" in lines[0]
+        assert "| A | B |" in result
+
+    def test_table_with_rowspan(self):
+        html = (
+            "<table>"
+            "<tr><td>Header</td><td>Value</td></tr>"
+            "<tr><td rowspan='2'>Semester 1</td><td>Algo</td></tr>"
+            "<tr><td>DB</td></tr>"
+            "</table>"
+        )
+        result = GLMOCRTool._convert_html_table_to_markdown(html)
+        lines = [l for l in result.strip().split("\n") if not l.startswith("| ---")]
+        semester_lines = [l for l in lines if "Semester 1" in l]
+        assert len(semester_lines) == 2
+
+    def test_whitespace_and_special_chars_in_cells(self):
+        html = (
+            "<table>"
+            "<tr><td>  Spaced  </td><td>Line\nBreak</td></tr>"
+            "<tr><td>Normal</td><td>OK</td></tr>"
+            "</table>"
+        )
+        result = GLMOCRTool._convert_html_table_to_markdown(html)
+        assert "| Spaced | Line Break |" in result
+
+    def test_malformed_html_falls_back_to_stripped_text(self):
+        html = "<table><tr><td>Only cell"
+        result = GLMOCRTool._convert_html_table_to_markdown(html)
+        assert "Only cell" in result
+
+    def test_non_table_html_returns_stripped_text(self):
+        html = "<div>Not a table <b>at all</b></div>"
+        result = GLMOCRTool._convert_html_table_to_markdown(html)
+        assert "Not a table" in result
+
+    def test_empty_table_falls_back(self):
+        html = "<table></table>"
+        result = GLMOCRTool._convert_html_table_to_markdown(html)
+        assert isinstance(result, str)
+
+    def test_text_from_layout_details_routes_table_blocks(self):
+        """Table-labeled blocks should be converted; others kept as-is."""
+        tool = GLMOCRTool()
+        page_layout = [
+            {"label": "title", "content": "Document Title"},
+            {
+                "label": "table",
+                "content": (
+                    "<table>"
+                    "<tr><td>Col1</td><td>Col2</td></tr>"
+                    "<tr><td>A</td><td>B</td></tr>"
+                    "</table>"
+                ),
+            },
+            {"label": "paragraph", "content": "Some text after table."},
+        ]
+        result = tool._text_from_layout_details(page_layout)
+        assert "Document Title" in result
+        assert "| Col1 | Col2 |" in result
+        assert "| A | B |" in result
+        assert "Some text after table." in result
+        assert "<table>" not in result
+        assert "<td>" not in result
+
+    def test_text_from_layout_details_preserves_non_html_table_content(self):
+        """A table-labeled block without HTML should pass through unchanged."""
+        tool = GLMOCRTool()
+        page_layout = [
+            {"label": "table", "content": "Plaintext table-like content"},
+        ]
+        result = tool._text_from_layout_details(page_layout)
+        assert result == "Plaintext table-like content"
+
+
 class TestHierarchicalChunker:
     """Test OCR text normalization and heading parsing."""
 

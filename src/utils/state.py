@@ -77,10 +77,6 @@ class DocumentUpload(BaseModel):
     ocr_warnings: list[str] = Field(default_factory=list)
     ocr_page_status: list[dict[str, Any]] = Field(default_factory=list)
 
-    # Vector store references
-    chunk_ids: list[str] = Field(default_factory=list)
-    parent_chunk_ids: list[str] = Field(default_factory=list)
-    embedding_model: Optional[str] = Field(default=None)
     document_title: Optional[str] = Field(default=None)
 
 
@@ -126,7 +122,6 @@ class Citation(BaseModel):
     source_locations: list[dict[str, Any]] = Field(default_factory=list)
     score: Optional[float] = Field(default=None)
     chunk_id: Optional[str] = Field(default=None)
-    parent_id: Optional[str] = Field(default=None)
     snippet: Optional[str] = Field(default=None)
 
 

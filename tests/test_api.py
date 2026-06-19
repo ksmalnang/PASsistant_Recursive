@@ -25,8 +25,8 @@ def test_upload_documents_returns_created(monkeypatch):
                 "document_type": "other",
                 "status": "completed",
                 "success": True,
-                "chunks_stored": 2,
-                "parent_chunks_stored": 1,
+                "vectors_stored": 2,
+                "context_records_stored": 1,
                 "document_title": "Knowledge Base",
                 "parsed_pages": None,
                 "failed_pages": [],
@@ -44,7 +44,9 @@ def test_upload_documents_returns_created(monkeypatch):
     client = TestClient(app)
     response = client.post(
         "/upload",
-        files={"files": ("knowledge-base.pdf", b"sample knowledge base content", "application/pdf")},
+        files={
+            "files": ("knowledge-base.pdf", b"sample knowledge base content", "application/pdf")
+        },
     )
 
     assert response.status_code == 201
@@ -55,16 +57,14 @@ def test_upload_documents_returns_created(monkeypatch):
             "filename": "knowledge-base.pdf",
             "document_type": "other",
             "status": "completed",
-            "chunks_stored": 2,
-            "parent_chunks_stored": 1,
-                "document_title": "Knowledge Base",
-                "parsed_pages": None,
-                "failed_pages": [],
-                "ocr_warnings": [],
-                "quality_warning": None,
-                "error": None,
-            }
-        ]
+            "document_title": "Knowledge Base",
+            "parsed_pages": None,
+            "failed_pages": [],
+            "ocr_warnings": [],
+            "quality_warning": None,
+            "error": None,
+        }
+    ]
 
 
 def test_upload_documents_rejects_unsupported_mime_type():
@@ -114,8 +114,6 @@ def test_ingest_knowledge_base_documents_success(monkeypatch):
                 mime_type="application/pdf",
                 file_size=len(file_bytes),
                 processing_status=ProcessingStatus.COMPLETED,
-                chunk_ids=["child-1", "child-2"],
-                parent_chunk_ids=["parent-1"],
                 document_title="Knowledge Base",
             )
 
@@ -124,7 +122,9 @@ def test_ingest_knowledge_base_documents_success(monkeypatch):
     client = TestClient(app)
     response = client.post(
         "/knowledge-base/ingest",
-        files={"files": ("knowledge-base.pdf", b"sample knowledge base content", "application/pdf")},
+        files={
+            "files": ("knowledge-base.pdf", b"sample knowledge base content", "application/pdf")
+        },
     )
 
     assert response.status_code == 200
@@ -135,16 +135,14 @@ def test_ingest_knowledge_base_documents_success(monkeypatch):
             "filename": "knowledge-base.pdf",
             "document_type": "other",
             "status": "completed",
-            "chunks_stored": 2,
-            "parent_chunks_stored": 1,
-                "document_title": "Knowledge Base",
-                "parsed_pages": None,
-                "failed_pages": [],
-                "ocr_warnings": [],
-                "quality_warning": None,
-                "error": None,
-            }
-        ]
+            "document_title": "Knowledge Base",
+            "parsed_pages": None,
+            "failed_pages": [],
+            "ocr_warnings": [],
+            "quality_warning": None,
+            "error": None,
+        }
+    ]
 
 
 def test_ingest_knowledge_base_documents_failure(monkeypatch):
@@ -159,7 +157,9 @@ def test_ingest_knowledge_base_documents_failure(monkeypatch):
     client = TestClient(app)
     response = client.post(
         "/knowledge-base/ingest",
-        files={"files": ("knowledge-base.pdf", b"sample knowledge base content", "application/pdf")},
+        files={
+            "files": ("knowledge-base.pdf", b"sample knowledge base content", "application/pdf")
+        },
     )
 
     assert response.status_code == 200
@@ -170,16 +170,14 @@ def test_ingest_knowledge_base_documents_failure(monkeypatch):
             "filename": "knowledge-base.pdf",
             "document_type": "other",
             "status": "failed",
-            "chunks_stored": 0,
-            "parent_chunks_stored": 0,
-                "document_title": None,
-                "parsed_pages": None,
-                "failed_pages": [],
-                "ocr_warnings": [],
-                "quality_warning": None,
-                "error": "vector store unavailable",
-            }
-        ]
+            "document_title": None,
+            "parsed_pages": None,
+            "failed_pages": [],
+            "ocr_warnings": [],
+            "quality_warning": None,
+            "error": "vector store unavailable",
+        }
+    ]
 
 
 def test_ingest_knowledge_base_documents_missing_files_returns_400():
@@ -374,7 +372,9 @@ async def test_chat_stream_service_emits_structured_events():
 
     service = ChatRouteService(session_manager=FakeSessionManager())
 
-    events = [event async for event in service.stream_chat_message("profil lulusan", thread_id="thread-1")]
+    events = [
+        event async for event in service.stream_chat_message("profil lulusan", thread_id="thread-1")
+    ]
 
     assert [event.event_type for event in events] == [
         "run.started",
@@ -389,7 +389,9 @@ async def test_chat_stream_service_emits_structured_events():
 
 
 def test_chat_stream_endpoint_returns_sse(monkeypatch):
-    async def fake_stream(*, message: str, thread_id: str | None = None, last_event_id: str | None = None):
+    async def fake_stream(
+        *, message: str, thread_id: str | None = None, last_event_id: str | None = None
+    ):
         del message, last_event_id
         yield ChatStreamEvent(
             event_id="run-1:1",
@@ -407,7 +409,12 @@ def test_chat_stream_endpoint_returns_sse(monkeypatch):
             run_id="run-1",
             timestamp="2026-05-06T00:00:01Z",
             sequence=2,
-            data={"response": "done", "intent": "general_chat", "documents_processed": 0, "citations": []},
+            data={
+                "response": "done",
+                "intent": "general_chat",
+                "documents_processed": 0,
+                "citations": [],
+            },
         )
 
     monkeypatch.setattr("src.api.routes.chat.handle_chat_message_stream", fake_stream)

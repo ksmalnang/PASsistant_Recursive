@@ -1,4 +1,4 @@
-"""Qdrant-backed indexing and retrieval helpers."""
+"""Qdrant-backed retrieval helpers."""
 
 from typing import Any
 
@@ -8,29 +8,23 @@ from pydantic import SecretStr
 from qdrant_client import QdrantClient
 
 from src.config import get_settings
-from src.services.ingestion_health import IngestionHealthCheck
 from src.utils.cache import RedisCache, get_cache
-from src.utils.tools.hierarchical_chunking import HierarchicalChunker
-from src.utils.tools.parent_store import ParentChunkStore
 from src.utils.vector_store.bm25 import TOKEN_PATTERN, BM25VectorOperations
 from src.utils.vector_store.collection import CollectionOperations
-from src.utils.vector_store.indexing import IndexingOperations
 from src.utils.vector_store.reranker import RemoteReranker
 from src.utils.vector_store.search import SearchOperations
 
 
 class VectorStoreTools(
-    IndexingOperations,
     SearchOperations,
     CollectionOperations,
     BM25VectorOperations,
 ):
     """
-    Vector-store facade for indexing and retrieval.
+    Vector-store facade for retrieval.
 
-    Handles document chunking, embeddings, Qdrant storage, parent-chunk hydration,
-    and retrieval strategies including dense similarity, RRF hybrid retrieval,
-    and optional second-stage reranking.
+    Handles embeddings and retrieval strategies including dense similarity,
+    RRF hybrid retrieval, and optional second-stage reranking.
     """
 
     _BM25_VECTOR_NAME = "bm25"
@@ -59,9 +53,6 @@ class VectorStoreTools(
         self.embeddings: Embeddings | None = None
         self.reranker: Any | None = None
         self.cache: RedisCache = get_cache()
-        self.chunker = HierarchicalChunker()
-        self.ingestion_health_check = IngestionHealthCheck()
-        self.parent_store = ParentChunkStore(cache=self.cache)
         self.bm25_vector_name = self._BM25_VECTOR_NAME
         self.bm25_vectors_enabled: bool | None = None
         self._rrf_warning_emitted = False

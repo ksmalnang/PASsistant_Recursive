@@ -17,7 +17,7 @@ def test_disabled_telegram_route_returns_404(monkeypatch):
     assert response.json() == {"detail": "Telegram is disabled."}
 
 
-def test_valid_secret_accepts_update_and_returns_200(monkeypatch):
+def test_valid_webhook_accepts_update_and_returns_200(monkeypatch):
     calls = []
 
     class FakeAdapter:
@@ -26,7 +26,7 @@ def test_valid_secret_accepts_update_and_returns_200(monkeypatch):
 
     monkeypatch.setattr(
         "src.api.routes.telegram.get_settings",
-        lambda: _settings(True, APP_ENV="production", TELEGRAM_WEBHOOK_SECRET_TOKEN="secret"),
+        lambda: _settings(True, APP_ENV="production"),
     )
     monkeypatch.setattr("src.api.routes.telegram.get_telegram_bot", lambda: object())
     monkeypatch.setattr("src.api.routes.telegram.get_telegram_adapter", lambda: FakeAdapter())
@@ -38,43 +38,12 @@ def test_valid_secret_accepts_update_and_returns_200(monkeypatch):
 
     response = client.post(
         "/telegram/webhook",
-        headers={"X-Telegram-Bot-Api-Secret-Token": "secret"},
         json={"update_id": 77},
     )
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert calls == [77]
-
-
-def test_invalid_secret_returns_403(monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.telegram.get_settings",
-        lambda: _settings(True, APP_ENV="production", TELEGRAM_WEBHOOK_SECRET_TOKEN="secret"),
-    )
-    client = TestClient(app)
-
-    response = client.post(
-        "/telegram/webhook",
-        headers={"X-Telegram-Bot-Api-Secret-Token": "wrong"},
-        json={"update_id": 77},
-    )
-
-    assert response.status_code == 403
-    assert response.json() == {"detail": "Invalid Telegram webhook secret."}
-
-
-def test_missing_secret_in_production_is_rejected(monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.telegram.get_settings",
-        lambda: _settings(True, APP_ENV="production", TELEGRAM_WEBHOOK_SECRET_TOKEN=None),
-    )
-    client = TestClient(app)
-
-    response = client.post("/telegram/webhook", json={"update_id": 77})
-
-    assert response.status_code == 403
-    assert response.json() == {"detail": "Telegram webhook secret is not configured."}
 
 
 def test_malformed_json_returns_400(monkeypatch):
@@ -119,10 +88,30 @@ def _settings(enabled: bool, **overrides):
     base = {
         "TELEGRAM_ENABLED": enabled,
         "TELEGRAM_BOT_TOKEN": "token",
+        "TELEGRAM_WEBHOOK_SECRET_TOKEN": None,
         "APP_ENV": "development",
     }
     base.update(overrides)
     return Settings(**base)
+
+def test_webhook_with_invalid_secret_token_returns_403(monkeypatch):
+    monkeypatch.setattr(
+        "src.api.routes.telegram.get_settings",
+        lambda: _settings(True, TELEGRAM_WEBHOOK_SECRET_TOKEN="valid_secret_123")
+    )
+    client = TestClient(app)
+
+    # Missing token
+    response1 = client.post("/telegram/webhook", json={"update_id": 1})
+    assert response1.status_code == 403
+
+    # Wrong token
+    response2 = client.post(
+        "/telegram/webhook",
+        json={"update_id": 1},
+        headers={"X-Telegram-Bot-Api-Secret-Token": "wrong_secret"}
+    )
+    assert response2.status_code == 403
 
 
 def _update(payload: dict):

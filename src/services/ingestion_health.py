@@ -5,12 +5,9 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING
+from typing import Any
 
 from src.utils.state import DocumentUpload
-
-if TYPE_CHECKING:
-    from src.utils.tools.hierarchical_chunking import HierarchicalDocument
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +25,8 @@ class IngestionIssue:
 class IngestionStats:
     """Structured stats recorded for one ingested document."""
 
-    parent_count: int
-    child_count: int
+    context_record_count: int
+    vector_record_count: int
     text_coverage: float
     pages: int | None
     extracted_chars: int
@@ -58,12 +55,12 @@ class IngestionReport:
 
 
 class IngestionHealthCheck:
-    """Validate that chunking produced a credible retrieval index."""
+    """Validate that document indexing produced a credible retrieval index."""
 
-    MIN_CHUNKS_PER_PAGE = 0.3
+    MIN_RECORDS_PER_PAGE = 0.3
     MIN_TEXT_COVERAGE_RATIO = 0.15
     MAX_ORPHAN_TEXT_RATIO = 0.70
-    MIN_CHILD_CHUNKS = 3
+    MIN_VECTOR_RECORDS = 1
     _HEADING_SUSPECT_PATTERN = re.compile(
         r"^(?:#+\s*)?(?:[IVXLCDM]+(?:\.\d+)*|\d+(?:\.\d+)*)\.?\s+\S+"
     )
@@ -71,17 +68,17 @@ class IngestionHealthCheck:
     def validate(
         self,
         document: DocumentUpload,
-        structured_document: HierarchicalDocument,
+        structured_document: Any,
     ) -> IngestionReport:
-        """Return a report describing chunking quality for one document."""
+        """Return a report describing indexing quality for one document."""
         issues: list[IngestionIssue] = []
 
         total_extracted = len(document.extracted_text or "")
-        total_indexed = sum(len(chunk.text) for chunk in structured_document.child_chunks)
+        total_indexed = sum(len(chunk.text) for chunk in structured_document.vector_records)
         coverage = (total_indexed / total_extracted) if total_extracted > 0 else 0.0
         stats = IngestionStats(
-            parent_count=len(structured_document.parent_chunks),
-            child_count=len(structured_document.child_chunks),
+            context_record_count=len(structured_document.context_records),
+            vector_record_count=len(structured_document.vector_records),
             text_coverage=coverage,
             pages=document.num_pages,
             extracted_chars=total_extracted,
@@ -89,16 +86,16 @@ class IngestionHealthCheck:
         )
 
         if document.num_pages and document.num_pages > 2:
-            ratio = len(structured_document.parent_chunks) / document.num_pages
-            if ratio < self.MIN_CHUNKS_PER_PAGE:
+            ratio = len(structured_document.context_records) / document.num_pages
+            if ratio < self.MIN_RECORDS_PER_PAGE:
                 issues.append(
                     IngestionIssue(
                         severity="ERROR",
                         code="LOW_CHUNK_DENSITY",
                         message=(
-                            f"Only {len(structured_document.parent_chunks)} parent chunks "
+                            f"Only {len(structured_document.context_records)} context records "
                             f"for {document.num_pages} pages (ratio={ratio:.2f}). "
-                            "Heading patterns may not match this document."
+                            "The indexing method may be too coarse for this document."
                         ),
                     )
                 )
@@ -112,24 +109,24 @@ class IngestionHealthCheck:
                 )
             )
 
-        if structured_document.parent_chunks and total_indexed > 0:
-            largest = max(len(parent.text) for parent in structured_document.parent_chunks)
+        if structured_document.context_records and total_indexed > 0:
+            largest = max(len(parent.text) for parent in structured_document.context_records)
             if (largest / total_indexed) > self.MAX_ORPHAN_TEXT_RATIO:
                 issues.append(
                     IngestionIssue(
                         severity="WARNING",
                         code="ORPHAN_CONCENTRATION",
-                        message="Most indexed text is concentrated in a single parent chunk.",
+                        message="Most indexed text is concentrated in a single context record.",
                     )
                 )
 
-        if len(structured_document.child_chunks) < self.MIN_CHILD_CHUNKS:
+        if len(structured_document.vector_records) < self.MIN_VECTOR_RECORDS:
             issues.append(
                 IngestionIssue(
                     severity="ERROR",
-                    code="TOO_FEW_CHILD_CHUNKS",
+                    code="TOO_FEW_VECTOR_RECORDS",
                     message=(
-                        f"Only {len(structured_document.child_chunks)} child chunks were produced."
+                        f"Only {len(structured_document.vector_records)} vector records were produced."
                     ),
                 )
             )

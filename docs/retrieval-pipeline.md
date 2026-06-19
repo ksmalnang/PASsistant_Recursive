@@ -2,7 +2,7 @@
 
 ## Overview
 
-The retrieval pipeline transforms a user question into relevant document context through multiple stages: query processing, vector search, result hydration, and ranking.
+The retrieval pipeline transforms a user question into relevant document context through multiple stages: query processing, vector search, result ranking, and confidence scoring.
 
 ## Pipeline Stages
 
@@ -10,9 +10,8 @@ The retrieval pipeline transforms a user question into relevant document context
 flowchart TD
     Q[User Question] --> QP[1. Query Processing]
     QP -->|"[q1, q2, q3]"| PS[2. Parallel Search]
-    PS -->|candidates| HY[3. Hydration]
-    HY -->|hydrated parents| RR[4. Reranking]
-    RR -->|top-k| CS[5. Confidence Scoring]
+    PS -->|candidates| RR[3. Reranking]
+    RR -->|top-k| CS[4. Confidence Scoring]
     CS --> OUT[Retrieved Context]
 
     subgraph QP[1. Query Processing]
@@ -65,54 +64,53 @@ Domain-specific Indonesian academic synonyms:
 flowchart LR
     PDF[PDF Upload] --> OCR[GLM-OCR]
     OCR -->|per-page| Text[Extracted Text]
-    Text --> Chunker[HierarchicalChunker]
-    Chunker --> Parents[Parent Chunks]
-    Chunker --> Children[Child Chunks]
-    Parents --> Disk[(Disk JSON + Redis)]
-    Children --> Embed[Embed with Breadcrumb]
+    Text --> Split[RecursiveCharacterTextSplitter]
+    Split -->|chunks| Embed[Batch Embed]
     Embed --> Qdrant[(Qdrant)]
 ```
 
-### Hierarchical Chunking
+### Chunked Indexing with RecursiveCharacterTextSplitter
 
-Documents are parsed into a tree using heading pattern detection:
+Each ingested document is split into overlapping chunks using LangChain's
+`RecursiveCharacterTextSplitter`. The splitter tries separators in order
+(`\n\n`, `\n`, `. `, ` `, `""`) to find natural break points.
 
-| Pattern | Type | Depth | Example |
-|---------|------|-------|---------|
-| `BAB [ROMAN]` | chapter | 1 | "BAB IV Alur Proses Studi" |
-| `[ROMAN].[digit]` | section | 2 | "IV.1. Registrasi dan Perwalian" |
-| `[ROMAN].[digit].[digit]` | subsection | 3 | "IV.1.1. Tahap Pendaftaran" |
-| `Semester [ROMAN]` | subsection | 3 | "Semester V" |
-| `Pilihan [digit]` | clause | 4 | "Pilihan 1" |
-| `[digit]` | chapter | 1 | "7 Daftar sebaran mata kuliah" |
-| `[digit].[digit]` | section | 2 | "6.1 Matrik Kurikulum" |
+| Parameter | Default | Env Var |
+|-----------|---------|---------|
+| Chunk size | 1000 chars | `CHUNK_SIZE` |
+| Chunk overlap | 200 chars | `CHUNK_OVERLAP` |
+| Separators | `["\n\n", "\n", ". ", " ", ""]` | `CHUNK_SEPARATORS` |
 
-### Parent vs Child Chunks
+Each chunk carries:
+- `chunk_id` — `{document_id}:chunk:{index}`
+- `text` — the chunk content
+- `document_id`, `filename`, `doc_title`, `document_type`
+- `chunk_type` — `"chunk"`
+- `chunk_index` — zero-based position in the document
+- `source_locations` — list of `{"page": N}` objects (1-based page numbers
+  derived from OCR page boundaries)
 
-| Aspect | Parent Chunk | Child Chunk |
-|--------|-------------|-------------|
-| Size limit | 8000 chars | 1200 chars |
-| Storage | Disk (JSON) + Redis cache | Qdrant vector DB |
-| Purpose | Full context for LLM | Retrieval target |
-| Embedding | Not embedded | Embedded with breadcrumb prepend |
+### Page Number Tracking
 
-### Contextual Embedding
+Page numbers are reconstructed from per-page OCR text lengths stored in
+`DocumentUpload.ocr_page_status`. Each chunk's character span is mapped
+against page boundaries so that chunks spanning multiple pages carry all
+relevant page numbers.
 
-Before embedding, child chunk text is prepended with its breadcrumb:
+### Embedding and Indexing
 
-```
-# What gets embedded:
-"III.4. Program Studi Teknik Informatika > Semester V\n<table>...IF2100501...</table>"
+Chunks are embedded in batches (32 at a time by default) using the
+configured embedding model. When hybrid retrieval (`rrf` or `reranker`)
+is active, a BM25 sparse vector is also generated for each chunk.
+All vectors and metadata are upserted into Qdrant as individual points.
 
-# What gets stored in payload (for display):
-"<table>...IF2100501...</table>"
-```
+### Cache Invalidation
 
-This ensures queries like "mata kuliah semester 5 teknik informatika" match chunks that only contain raw table HTML.
-
-### Leaf Chapter Handling
-
-Chapters without sub-sections (e.g., "7 Daftar sebaran mata kuliah tiap semester") are included as parent chunks alongside section-level nodes. Without this, their content would be lost from the index.
+On each document indexing:
+1. **Blanket invalidation** — all cached search results are cleared
+   (`delete_prefix("search:")`).
+2. **Per-document invalidation** — any cache entries scoped to the
+   specific document ID are also removed (`delete_prefix("doc:{id}:")`).
 
 ## 3. Search Strategies
 
@@ -137,24 +135,30 @@ Chapters without sub-sections (e.g., "7 Daftar sebaran mata kuliah tiap semester
 
 ### Score Fields
 
-- `matched_children[].retrieval_score` is the first-stage child hit score.
-- `retrieval_score` on the parent is the best first-stage score among its matched children.
-- `reranker_score` is present only when reranker mode scores the hydrated parent result.
-- `final_score` is the score used for final ranking. The legacy `score` field mirrors `final_score` for compatibility.
+- `retrieval_score` is the first-stage vector similarity or RRF score.
+- `reranker_score` is present only when reranker mode scores the chunk.
+- `final_score` is the final confidence score computed by the Confidence Scoring stage.
 
-## 4. Configuration
+## 4. Confidence Scoring
+
+A custom 5-component model evaluates the final retrieved context to assign a confidence level (High, Medium, Low) and determine if an honest fallback is required:
+1. **Score Magnitude**: Checks if the top chunk's final score passes a baseline threshold.
+2. **Margin**: Compares the top chunk to the rest to ensure it strongly stands out.
+3. **Overlap**: Checks if semantic overlap across top results confirms the answer.
+4. **Strong Hits**: Counts how many chunks cross a "strong" relevance threshold.
+5. **Explicit Policy Rules**: Detects if the query relates to rigid academic rules and ensures policy documents are retrieved.
+
+## 5. Configuration
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `RETRIEVAL_TOP_K` | 10 | Final number of parent chunks returned |
+| `RETRIEVAL_TOP_K` | 10 | Final number of retrieval records returned |
 | `RETRIEVAL_STRATEGY` | reranker | Ranking strategy |
 | `RERANKER_CANDIDATE_MULTIPLIER` | 6 | First-stage overfetch ratio |
-| `parent_max_chars` | 8000 | Max parent chunk size before truncation |
-| `child_max_chars` | 1200 | Max child chunk size |
-| `child_overlap_chars` | 120 | Overlap between split child windows |
-| `BM25_DISABLE_STEMMER` | False | Indonesian stemmer enabled |
+| `CHUNK_SIZE` | 1000 | Target character length per chunk |
+| `CHUNK_OVERLAP` | 200 | Character overlap between consecutive chunks |
 
-## 5. Caching
+## 6. Caching
 
 Search results are cached in Redis with key based on:
 - Query text
@@ -164,3 +168,4 @@ Search results are cached in Redis with key based on:
 - BM25 settings
 
 Cache is automatically invalidated on document ingestion or deletion (`delete_prefix("search:")`).
+Per-document cache entries are also cleared on re-ingestion (`delete_prefix("doc:{id}:")`).

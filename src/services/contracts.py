@@ -46,17 +46,8 @@ class DocumentTextExtractor(Protocol):
 
 
 @runtime_checkable
-class DocumentChunkIndexer(Protocol):
-    """Store processed documents in the retrieval index."""
-
-    async def store_document_chunks(self, document: DocumentUpload) -> list[str]:
-        """Persist indexed chunks and return their identifiers."""
-        ...
-
-
-@runtime_checkable
 class DocumentRetriever(Protocol):
-    """Retrieve relevant document chunks for a query."""
+    """Retrieve relevant document context for a query."""
 
     retrieval_strategy: RetrievalStrategy
     reranker_model: str | None
@@ -71,9 +62,18 @@ class DocumentRetriever(Protocol):
     ) -> list[dict[str, Any]]:
         """Run retrieval using the configured similarity, RRF, or reranker strategy.
 
-        `top_k` is the maximum number of hydrated parent results to return.
+        `top_k` is the maximum number of retrieval results to return.
         `score_threshold` applies directly only to pure similarity retrieval.
         """
+        ...
+
+
+@runtime_checkable
+class DocumentIndexer(Protocol):
+    """Index a processed document into the retrieval vector store."""
+
+    async def index_document(self, document: DocumentUpload) -> Any:
+        """Split, embed, and upsert document chunks."""
         ...
 
 

@@ -1,7 +1,7 @@
 """Document processing node."""
 
 from src.services.contracts import (
-    DocumentChunkIndexer,
+    DocumentIndexer,
     DocumentTextExtractor,
     DocumentUploadPreparer,
 )
@@ -9,36 +9,38 @@ from src.services.document_processing import (
     DocumentIngestionService,
     DocumentProcessingService,
 )
+from src.services.indexing import DocumentIndexingService
 from src.utils.state import AgentState, DocumentUpload
-from src.utils.tools import DocumentTools, GLMOCRTool, VectorStoreTools
+from src.utils.tools import DocumentTools, GLMOCRTool
 
 
 class DocumentProcessingNode:
     """
-    Handles document OCR, chunking, and retrieval indexing.
+    Handles document OCR and indexing.
 
     Workflow:
     1. Save uploaded file
     2. Extract text using GLM-4 OCR
-    3. Chunk and store in Qdrant
+    3. Split, embed, and index chunks into Qdrant
     4. Update document status
     """
 
     def __init__(
         self,
         text_extractor: DocumentTextExtractor | None = None,
-        chunk_indexer: DocumentChunkIndexer | None = None,
         upload_preparer: DocumentUploadPreparer | None = None,
         processing_service: DocumentProcessingService | None = None,
         ingestion_service: DocumentIngestionService | None = None,
+        indexer: DocumentIndexer | None = None,
     ):
         self._processing_service = processing_service or DocumentProcessingService(
             text_extractor=text_extractor or GLMOCRTool(),
-            chunk_indexer=chunk_indexer or VectorStoreTools(),
         )
+        resolved_indexer = indexer if indexer is not None else DocumentIndexingService()
         self._ingestion_service = ingestion_service or DocumentIngestionService(
             upload_preparer=upload_preparer or DocumentTools(),
             processor=self._processing_service,
+            indexer=resolved_indexer,
         )
 
     async def run(self, state: AgentState) -> dict:

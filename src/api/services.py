@@ -444,13 +444,11 @@ class DocumentRouteService:
     def _build_ingestion_response(self, document: Any) -> DocumentIngestionResponse:
         """Build the API response for a processed document."""
         return DocumentIngestionResponse(
-            success=document.processing_status.value == "completed" and len(document.chunk_ids) > 0,
+            success=document.processing_status.value == "completed",
             document_id=document.document_id,
             filename=document.filename,
             document_type=document.document_type.value,
             status=document.processing_status.value,
-            chunks_stored=len(document.chunk_ids),
-            parent_chunks_stored=len(document.parent_chunk_ids),
             document_title=document.document_title,
             parsed_pages=document.parsed_pages,
             failed_pages=list(document.failed_pages or []),

@@ -9,7 +9,7 @@ PASsistant is a Retrieval-Augmented Generation (RAG) chatbot built on LangGraph.
 ```mermaid
 flowchart TB
     subgraph API["API Layer"]
-        FastAPI[FastAPI REST + WebSocket]
+        FastAPI[FastAPI REST + WebSocket (SSE Support)]
         Telegram[Telegram Bot Adapter]
     end
 
@@ -17,6 +17,8 @@ flowchart TB
         Router[Router Node]
         Retrieval[Retrieval Node]
         Response[Response Node]
+        Fallback[Fallback Response Node]
+        ErrorNode[Error Handler Node]
         OutputGuard[Output Guard]
         DocProcessor[Document Processor]
         StudentHandler[Student Record Handler]
@@ -27,11 +29,13 @@ flowchart TB
         ResponseGen[ResponseGeneration]
         DocProcessing[DocumentProcessing]
         IngestionHealth[IngestionHealth]
+        Sessions[InMemorySessionManager]
+        RateLimit[InMemoryRateLimiter]
     end
 
     subgraph Infra["Infrastructure"]
         Qdrant[(Qdrant)]
-        Redis[(Redis)]
+        Redis[(Redis Cache)]
         LLM[OpenAI / OpenRouter]
         Zhipu[Zhipu AI GLM-4 OCR]
     end
@@ -54,7 +58,7 @@ sequenceDiagram
     participant Q as Qdrant
     participant OG as Output Guard
 
-    U->>API: POST /chat
+    U->>API: POST /chat (or SSE /chat/stream)
     API->>IG: validate(message)
     IG-->>API: safe ✓
     API->>R: classify intent
@@ -75,18 +79,34 @@ sequenceDiagram
     LLM-->>API: answer
     API->>OG: filter(answer)
     OG-->>API: safe answer
-    API-->>U: ChatResponse
+    API-->>U: ChatResponse (or SSE Events)
 ```
+
+## SSE Streaming Support
+
+The FastAPI layer supports streaming interactions via Server-Sent Events (SSE). It emits 5 event types during a run:
+1. `run.started`
+2. `run.status`
+3. `message.delta`
+4. `run.completed`
+5. `run.failed`
+
+It also supports seamless resumption using the `Last-Event-ID` header or query parameter.
 
 ## Key Design Decisions
 
-### Hierarchical Parent-Child Chunking
+### Chunked Document Indexing
 
-Documents are parsed into a tree structure mirroring their logical hierarchy (chapters → sections → subsections). Child chunks (small, indexed in vector DB) point to parent chunks (larger, stored on disk). At retrieval time, child hits are hydrated with parent context for richer LLM input.
+Documents are OCR-processed and split into overlapping chunks using LangChain's
+`RecursiveCharacterTextSplitter`. Each chunk is embedded and upserted into Qdrant
+with page-number metadata derived from OCR page boundaries, enabling page-level
+citations in retrieval results.
 
 ### Contextual Embedding
 
-Child chunk text is prepended with its breadcrumb path before embedding. This ensures that a table chunk under "III.4. Program Studi Teknik Informatika > Semester V" encodes the prodi and semester context in its vector, even if the raw table only contains course codes.
+Each chunk payload includes document-level metadata (`doc_title`, `filename`,
+`document_type`) and page-level `source_locations`, keeping broad context
+available to semantic search and enabling accurate citations.
 
 ### Hybrid Retrieval with Reranking
 
@@ -98,25 +118,3 @@ Three retrieval strategies are supported:
 ### Parallel Multi-Query
 
 Up to 3 query variants (original, LLM-rewritten, expanded) are searched in parallel via `asyncio.gather`, reducing retrieval latency from 3x to 1x the single-query time.
-
-## Directory Structure
-
-```
-src/
-├── agent.py                 # LangGraph app entry point
-├── api/                     # FastAPI REST + WebSocket layer
-│   ├── routes/              # Endpoint handlers
-│   ├── models.py            # Pydantic request/response schemas
-│   └── services.py          # API orchestration
-├── config/                  # Settings and logging
-├── eval/                    # RAGAS evaluation framework
-│   └── ragas/               # Evaluator, CLI, reporting
-├── graphs/                  # LangGraph workflow definition
-├── guardrails/              # Input/output safety filters
-├── services/                # Business logic (intent, response, ingestion)
-├── telegram_bot/            # Telegram integration
-└── utils/
-    ├── nodes/               # LangGraph node implementations
-    ├── tools/               # OCR, chunking, student tools
-    └── vector_store/        # Qdrant operations (indexing, search, BM25)
-```

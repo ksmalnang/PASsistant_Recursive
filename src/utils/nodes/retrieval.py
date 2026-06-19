@@ -22,59 +22,12 @@ class RetrievalNode:
     Retrieves relevant indexed document context from the retrieval stack.
 
     Delegates to the configured retrieval strategy (similarity, RRF, or reranker)
-    and augments the state with hydrated parent/child retrieval context.
+    and augments the agent state with retrieved chunk context.
     """
 
-    _STOPWORDS = {
-        "aku",
-        "apa",
-        "yang",
-        "akan",
-        "jika",
-        "kalau",
-        "kak",
-        "kami",
-        "gue",
-        "gua",
-        "gw",
-        "nih",
-        "dong",
-        "sih",
-        "kok",
-        "loh",
-        "yah",
-        "ya",
-        "deh",
-        "saya",
-        "dan",
-        "atau",
-        "di",
-        "ke",
-        "dari",
-        "untuk",
-        "dengan",
-        "selama",
-        "tanpa",
-        "mengajukan",
-        "mengikuti",
-        "ikut",
-        "bagaimana",
-        "adalah",
-        "masih",
-        "bisa",
-        "nggak",
-        "enggak",
-        "ga",
-        "gak",
-        "tdk",
-        "the",
-        "is",
-        "of",
-        "to",
-        "a",
-        "an",
-    }
-    _POLICY_RULE_MARKERS = (
+    # --- Policy detection ---
+    # Phrases in a retrieved chunk that signal an explicit academic rule or prohibition.
+    _POLICY_RULE_MARKERS: tuple[str, ...] = (
         "dapat dilakukan setelah",
         "tidak dapat",
         "belum bisa",
@@ -84,7 +37,10 @@ class RetrievalNode:
         "syarat",
         "ketentuan",
     )
-    _POLICY_SCOPE_TERMS = (
+
+    # Domain terms that identify a query as policy/admin rather than personal student records.
+    # When present, the document-type filter is widened beyond TRANSCRIPT.
+    _POLICY_SCOPE_TERMS: tuple[str, ...] = (
         "ambil sks",
         "maksimal sks",
         "batas sks",
@@ -99,10 +55,26 @@ class RetrievalNode:
         "lunas",
         "perwalian",
         "krs",
-        "syarat",
-        "ketentuan",
         "aturan",
     )
+
+    # --- Semester numeral normalisation ---
+    # Converts between Arabic ("5") and Roman ("V") semester numbers for lexical matching.
+    _ARABIC_TO_ROMAN: dict[str, str] = {
+        "1": "I",
+        "2": "II",
+        "3": "III",
+        "4": "IV",
+        "5": "V",
+        "6": "VI",
+        "7": "VII",
+        "8": "VIII",
+        "9": "IX",
+        "10": "X",
+    }
+    _ROMAN_TO_ARABIC: dict[str, str] = {v: k for k, v in _ARABIC_TO_ROMAN.items()}
+    _SEMESTER_ARABIC_PATTERN = re.compile(r"\b(semester)\s+(\d{1,2})\b", re.IGNORECASE)
+    _SEMESTER_ROMAN_PATTERN = re.compile(r"\b(semester)\s+([IVXL]+)\b", re.IGNORECASE)
 
     def __init__(
         self,
@@ -219,17 +191,19 @@ class RetrievalNode:
     def _rewrite_query(self, question: str) -> str:
         """Compress a conversational question into a keyword-rich retrieval query."""
         llm = self._get_llm()
-        if llm is not None:
-            try:
-                response = llm.invoke(
-                    [HumanMessage(content=QUERY_REWRITE_PROMPT.format(question=question))]
-                )
-                rewritten = str(response.content).strip()
-                if rewritten:
-                    return rewritten.splitlines()[0].strip()
-            except Exception as exc:
-                logger.warning("Query rewrite failed, falling back to heuristics: %s", exc)
-        return self._extract_keywords(question)
+        if llm is None:
+            return question
+        try:
+            response = llm.invoke(
+                [HumanMessage(content=QUERY_REWRITE_PROMPT.format(question=question))]
+            )
+            rewritten = str(response.content).strip()
+            if rewritten:
+                return rewritten.splitlines()[0].strip()
+            return question
+        except Exception as exc:
+            logger.warning("Query rewrite failed, using original question: %s", exc)
+            return question
 
     def _expand_query(self, query: str) -> str:
         """Add a small synonym layer for Indonesian academic-policy retrieval."""
@@ -251,22 +225,6 @@ class RetrievalNode:
             return normalized
         return " ".join(part for part in parts if part).strip()
 
-    _ARABIC_TO_ROMAN = {
-        "1": "I",
-        "2": "II",
-        "3": "III",
-        "4": "IV",
-        "5": "V",
-        "6": "VI",
-        "7": "VII",
-        "8": "VIII",
-        "9": "IX",
-        "10": "X",
-    }
-    _ROMAN_TO_ARABIC = {v: k for k, v in _ARABIC_TO_ROMAN.items()}
-    _SEMESTER_ARABIC_PATTERN = re.compile(r"\b(semester)\s+(\d{1,2})\b", re.IGNORECASE)
-    _SEMESTER_ROMAN_PATTERN = re.compile(r"\b(semester)\s+([IVXL]+)\b", re.IGNORECASE)
-
     def _normalize_semester_numerals(self, query: str) -> str:
         """Replace 'semester 5' with 'semester V' (and vice versa) for retrieval."""
         # Arabic → Roman (e.g. "semester 5" → "semester V")
@@ -287,24 +245,13 @@ class RetrievalNode:
 
         return query
 
-    def _extract_keywords(self, text: str) -> str:
-        """Heuristic fallback for query rewriting when no LLM is configured."""
-        tokens = re.findall(r"\b[\w-]+\b", text.lower())
-        kept: list[str] = []
-        for token in tokens:
-            if token in self._STOPWORDS or len(token) <= 2:
-                continue
-            if token not in kept:
-                kept.append(token)
-        return " ".join(kept[:12]) or text.strip()
-
     def _merge_results(
         self,
         current: list[dict[str, Any]],
         incoming: list[dict[str, Any]],
         query_variant: str,
     ) -> list[dict[str, Any]]:
-        """Merge per-query retrieval results by hydrated parent id."""
+        """Merge per-query retrieval results by chunk id, keeping the highest score."""
         merged: dict[str, dict[str, Any]] = {
             self._result_key(result): self._tag_result(result, result.get("matched_query"))
             for result in current
@@ -344,16 +291,6 @@ class RetrievalNode:
                     if existing_score is None
                     else max(float(existing_score), float(tagged_score))
                 )
-            existing_children = {
-                str(child.get("chunk_id") or child.get("text") or "")
-                for child in existing.get("matched_children", [])
-                if isinstance(child, dict)
-            }
-            for child in tagged.get("matched_children", []):
-                child_key = str(child.get("chunk_id") or child.get("text") or "")
-                if child_key and child_key not in existing_children:
-                    existing.setdefault("matched_children", []).append(child)
-                    existing_children.add(child_key)
 
         return sorted(
             merged.values(),
@@ -374,23 +311,13 @@ class RetrievalNode:
                 "contacting the academic office."
             )
 
-        query_terms = set(self._extract_keywords(query).split())
+        query_terms = set(query.lower().split())
         scored_results: list[dict[str, Any]] = []
         overlap_hits = 0
         strong_hits = 0
         strategy = getattr(self.vector_tools, "retrieval_strategy", "similarity")
         for result in results[:5]:
-            evidence_text = " ".join(
-                [
-                    str(result.get("breadcrumb") or ""),
-                    str(result.get("text") or ""),
-                    " ".join(
-                        str(child.get("text") or "")
-                        for child in result.get("matched_children", [])
-                        if isinstance(child, dict)
-                    ),
-                ]
-            ).lower()
+            evidence_text = str(result.get("text") or "").lower()
             overlap_terms = sorted(term for term in query_terms if term and term in evidence_text)
             overlap_ratio = len(overlap_terms) / max(1, len(query_terms))
             explicit_policy_support = self._result_has_explicit_policy_rule(result)
@@ -458,13 +385,7 @@ class RetrievalNode:
 
     def _result_has_explicit_policy_rule(self, result: dict[str, Any]) -> bool:
         """Check whether a retrieved result contains an explicit answer-bearing rule."""
-        texts = [str(result.get("text") or "")]
-        texts.extend(
-            str(child.get("text") or "")
-            for child in result.get("matched_children", [])
-            if isinstance(child, dict)
-        )
-        return any(self._contains_explicit_policy_rule(text) for text in texts)
+        return self._contains_explicit_policy_rule(str(result.get("text") or ""))
 
     def _is_strategy_strong_hit(self, result: dict[str, Any], strategy: str) -> bool:
         """Count strong hits using thresholds appropriate to the active retrieval strategy."""
@@ -532,11 +453,11 @@ class RetrievalNode:
         return top_score >= 0.35
 
     def _result_key(self, result: dict[str, Any]) -> str:
-        """Build a stable dedupe key for hydrated parent results."""
-        return str(
-            result.get("parent_id")
-            or f"{result.get('document_id', '')}:{result.get('section_id', '')}:{result.get('chunk_id', '')}"
-        )
+        """Build a stable dedupe key for retrieved chunk results."""
+        chunk_id = result.get("chunk_id")
+        if chunk_id:
+            return str(chunk_id)
+        return f"{result.get('document_id', '')}:{str(result.get('text', ''))[:40]}"
 
     def _tag_result(self, result: dict[str, Any], query_variant: str | None) -> dict[str, Any]:
         """Attach the query variant that produced a result."""

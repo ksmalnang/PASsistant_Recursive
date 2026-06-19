@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 
 from src.services.contracts import (
-    DocumentChunkIndexer,
+    DocumentIndexer,
     DocumentTextExtractor,
     DocumentUploadPreparer,
 )
@@ -24,15 +24,13 @@ class DocumentProcessingResult:
 
 
 class DocumentProcessingService:
-    """Process stored documents through OCR and retrieval indexing."""
+    """Process stored documents through OCR."""
 
     def __init__(
         self,
         text_extractor: DocumentTextExtractor,
-        chunk_indexer: DocumentChunkIndexer,
     ):
         self._text_extractor = text_extractor
-        self._chunk_indexer = chunk_indexer
 
     async def process_pending_documents(
         self,
@@ -50,8 +48,6 @@ class DocumentProcessingService:
                     "Document processed successfully",
                     extra={
                         "document_id": document.document_id,
-                        "chunks": len(document.chunk_ids),
-                        "parent_chunks": len(document.parent_chunk_ids),
                         "quality_score": document.text_quality_score,
                     },
                 )
@@ -85,11 +81,6 @@ class DocumentProcessingService:
             document.ocr_page_status = list(result.page_results or [])
             if document.ocr_warnings:
                 document.processing_error = "; ".join(document.ocr_warnings)
-            document.chunk_ids = await self._chunk_indexer.store_document_chunks(document)
-            if not document.chunk_ids:
-                raise RuntimeError(
-                    "Document ingestion completed OCR but no vector chunks were stored"
-                )
             document.processing_status = ProcessingStatus.COMPLETED
         except Exception as exc:
             document.processing_status = ProcessingStatus.FAILED
@@ -104,9 +95,11 @@ class DocumentIngestionService:
         self,
         upload_preparer: DocumentUploadPreparer,
         processor: DocumentProcessingService,
+        indexer: DocumentIndexer | None = None,
     ):
         self._upload_preparer = upload_preparer
         self._processor = processor
+        self._indexer = indexer
 
     def prepare_upload(self, file_bytes: bytes, filename: str) -> DocumentUpload:
         """Persist an uploaded file and return its metadata."""
@@ -116,4 +109,18 @@ class DocumentIngestionService:
         """Prepare and fully ingest an uploaded document."""
         document = self.prepare_upload(file_bytes, filename)
         await self._processor.process_document(document)
+        if self._indexer is not None and document.extracted_text:
+            result = await self._indexer.index_document(document)
+            document.ingestion_report = {
+                "chunk_count": result.chunk_count,
+                "indexed_chars": result.indexed_chars,
+                "issues": result.issues,
+            }
+            logger.info(
+                "Document indexed into vector store",
+                extra={
+                    "document_id": document.document_id,
+                    "chunk_count": result.chunk_count,
+                },
+            )
         return document

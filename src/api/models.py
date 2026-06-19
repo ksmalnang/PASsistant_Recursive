@@ -83,10 +83,7 @@ class DocumentDeleteResponse(BaseModel):
     success: bool = Field(default=True, description="Whether deletion completed")
     document_id: str = Field(description="Deleted document identifier")
     filename: str = Field(description="Deleted document filename")
-    chunks_deleted: bool = Field(
-        default=True,
-        description="Whether vector chunks were removed from the index",
-    )
+    deleted: bool = Field(default=True, description="Whether deletion completed")
 
 
 class DocumentIngestionResponse(BaseModel):
@@ -97,11 +94,6 @@ class DocumentIngestionResponse(BaseModel):
     filename: str = Field(description="Original filename")
     document_type: str = Field(description="Detected document type")
     status: str = Field(description="Processing status")
-    chunks_stored: int = Field(default=0, description="Number of vector chunks stored")
-    parent_chunks_stored: int = Field(
-        default=0,
-        description="Number of parent chunks stored",
-    )
     document_title: str | None = Field(
         default=None,
         description="Extracted or inferred document title",
@@ -120,7 +112,7 @@ class DocumentIngestionResponse(BaseModel):
     )
     quality_warning: str | None = Field(
         default=None,
-        description="Ingestion quality warning if chunk coverage looked suspicious",
+        description="Ingestion quality warning, if any",
     )
     error: str | None = Field(default=None, description="Processing error, if any")
 
@@ -133,3 +125,16 @@ class HealthResponse(BaseModel):
     environment: str = Field(description="Current environment")
     redis: DependencyHealthResponse = Field(description="Redis connectivity status")
     qdrant: DependencyHealthResponse = Field(description="Qdrant connectivity status")
+
+
+class TelegramWebhookHealthResponse(BaseModel):
+    """Health status and info for a Telegram webhook."""
+
+    url: str = Field(description="Current webhook URL")
+    has_custom_certificate: bool = Field(description="True, if a custom certificate was provided")
+    pending_update_count: int = Field(description="Number of updates awaiting delivery")
+    ip_address: str | None = Field(default=None, description="Currently used webhook IP address")
+    last_error_date: datetime | int | None = Field(default=None, description="Time for the most recent error")
+    last_error_message: str | None = Field(default=None, description="Error message in human-readable format")
+    max_connections: int | None = Field(default=None, description="Maximum allowed number of simultaneous HTTPS connections")
+    allowed_updates: list[str] | None = Field(default=None, description="A list of update types the bot is subscribed to")

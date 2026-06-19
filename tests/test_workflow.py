@@ -284,7 +284,7 @@ class TestResponseNode:
             {"page": 13, "bbox_2d": [10.0, 20.0, 100.0, 50.0]}
         ]
 
-    def test_citation_builder_deduplicates_parent_chunks(self):
+    def test_citation_builder_deduplicates_context_records(self):
         """Multiple child hits under one parent should produce one citation."""
         builder = CitationBuilder()
 

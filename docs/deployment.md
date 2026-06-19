@@ -14,7 +14,7 @@ flowchart LR
 | Service | Purpose | Minimum Spec |
 |---------|---------|--------------|
 | Qdrant | Vector database | 1GB RAM, persistent storage |
-| Redis | Search cache + parent chunk cache | 512MB RAM |
+| Redis | Search cache + context record cache | 512MB RAM |
 | Python app | FastAPI server | 1 vCPU, 1GB RAM |
 | LLM API | Response generation, query rewrite | OpenRouter / OpenAI account |
 | Zhipu AI | GLM-4 OCR for PDF ingestion | API key |
@@ -77,7 +77,9 @@ CMD ["uv", "run", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000
 OPENAI_API_KEY=your_key
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 LLM_MODEL=deepseek/deepseek-v4-flash:exacto
+LLM_REASONING_ENABLED=true
 EMBEDDING_MODEL=qwen/qwen3-embedding-8b:nitro
+VECTOR_SIZE=4096
 
 # OCR
 ZHIPU_API_KEY=your_zhipu_key
@@ -92,6 +94,13 @@ RETRIEVAL_TOP_K=10
 RERANKER_MODEL=jinaai/jina-reranker-v2-base-multilingual
 RERANKER_BASE_URL=https://api.jina.ai/v1
 RERANKER_API_KEY=your_jina_key
+
+# API & Security
+RATE_LIMIT_PER_MINUTE=20
+CORS_ALLOWED_ORIGINS=["*"]
+
+# Telegram (If webhook mode used)
+TELEGRAM_WEBHOOK_SECRET_TOKEN=your_webhook_secret_here
 ```
 
 ### Production Recommendations
@@ -112,14 +121,12 @@ REDIS_CACHE_TTL_SECONDS=600
 TELEGRAM_ENABLED=true
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_WEBHOOK_URL=https://your-domain.com/telegram/webhook
-TELEGRAM_WEBHOOK_SECRET_TOKEN=random_secret_string
 
 # Register webhook
 curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \
   -d "{
     \"url\": \"${TELEGRAM_WEBHOOK_URL}\",
-    \"secret_token\": \"${TELEGRAM_WEBHOOK_SECRET_TOKEN}\",
     \"allowed_updates\": [\"message\"]
   }"
 ```

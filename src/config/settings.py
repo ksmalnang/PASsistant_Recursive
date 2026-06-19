@@ -3,11 +3,12 @@ Application configuration management using Pydantic Settings.
 Loads environment variables from .env file with validation.
 """
 
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -95,7 +96,7 @@ class Settings(BaseSettings):
     RETRIEVAL_TOP_K: int = Field(
         default=5,
         ge=1,
-        description="Number of hydrated parent chunks to retrieve and expose to response generation",
+        description="Number of hydrated context records to retrieve and expose to response generation",
     )
     RERANKER_MODEL: Optional[str] = Field(
         default=None,
@@ -112,6 +113,22 @@ class Settings(BaseSettings):
     RERANKER_CANDIDATE_MULTIPLIER: int = Field(
         default=6,
         description="How many first-stage candidates to fetch per requested result before reranking",
+    )
+
+    # --- Chunking Configuration ---
+    CHUNK_SIZE: int = Field(
+        default=1000,
+        ge=100,
+        description="Target character length per chunk for document indexing",
+    )
+    CHUNK_OVERLAP: int = Field(
+        default=200,
+        ge=0,
+        description="Character overlap between consecutive chunks",
+    )
+    CHUNK_SEPARATORS: list[str] = Field(
+        default_factory=lambda: ["\n\n", "\n", ". ", " ", ""],
+        description="Ordered separators for RecursiveCharacterTextSplitter",
     )
 
     # --- Redis Cache ---
@@ -143,7 +160,6 @@ class Settings(BaseSettings):
     # --- Telegram Bot ---
     TELEGRAM_BOT_TOKEN: Optional[str] = Field(default=None)
     TELEGRAM_WEBHOOK_URL: Optional[str] = Field(default=None)
-    TELEGRAM_WEBHOOK_SECRET_TOKEN: Optional[str] = Field(default=None)
     TELEGRAM_ENABLED: bool = Field(default=False)
     TELEGRAM_MAX_FILE_BYTES: int = Field(default=20_000_000)
     TELEGRAM_ALLOWED_FILE_MIME_TYPES: list[str] | None = Field(default=None)

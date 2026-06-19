@@ -6,6 +6,9 @@ from typing import Any, Literal
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import (
     Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
     Modifier,
     SparseVectorParams,
     VectorParams,
@@ -172,3 +175,63 @@ class CollectionOperations:
     def _supports_bm25_vectors(self) -> bool:
         """Return whether BM25 vectors are available in the current collection."""
         return self.bm25_vectors_enabled is True
+
+    def list_documents(self) -> list[dict[str, Any]]:
+        """Return a summary of all documents currently in the Qdrant collection."""
+        docs: dict[str, dict[str, Any]] = {}
+        offset = None
+        while True:
+            result, offset = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=100,
+                with_payload=["document_id", "filename", "doc_title"],
+                offset=offset,
+            )
+            for point in result:
+                payload = point.payload or {}
+                doc_id = payload.get("document_id")
+                if not doc_id:
+                    continue
+                if doc_id in docs:
+                    docs[doc_id]["chunks"] += 1
+                else:
+                    docs[doc_id] = {
+                        "document_id": doc_id,
+                        "filename": payload.get("filename", ""),
+                        "doc_title": payload.get("doc_title"),
+                        "chunks": 1,
+                    }
+            if offset is None:
+                break
+        return sorted(docs.values(), key=lambda d: d["filename"])
+
+    def find_document_ids_by_filename(self, filename: str) -> set[str]:
+        """Return the set of document IDs whose chunks carry the given filename."""
+        ids: set[str] = set()
+        offset = None
+        while True:
+            result, offset = self.client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=Filter(
+                    must=[FieldCondition(key="filename", match=MatchValue(value=filename))]
+                ),
+                limit=100,
+                with_payload=["document_id"],
+                offset=offset,
+            )
+            for point in result:
+                doc_id = (point.payload or {}).get("document_id")
+                if doc_id:
+                    ids.add(doc_id)
+            if offset is None:
+                break
+        return ids
+
+    def delete_document_chunks(self, document_id: str) -> None:
+        """Delete all Qdrant points associated with the given document ID."""
+        self.client.delete(
+            collection_name=self.collection_name,
+            points_selector=Filter(
+                must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
+            ),
+        )

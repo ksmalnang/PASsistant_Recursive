@@ -6,6 +6,7 @@ import logging
 import mimetypes
 import re
 from dataclasses import dataclass, field
+from html.parser import HTMLParser
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -549,12 +550,66 @@ class GLMOCRTool:
         return warnings
 
     def _text_from_layout_details(self, page_layout: list[dict[str, Any]]) -> str:
-        """Build page text from serialized layout block content."""
-        return "\n".join(
-            str(detail.get("content") or "").strip()
-            for detail in page_layout
-            if str(detail.get("content") or "").strip()
-        ).strip()
+        """Build page text from serialized layout block content.
+
+        Table-labeled blocks whose content contains HTML table markup are
+        converted to Markdown tables so the extracted text is clean and
+        useful for downstream chunking, retrieval, and LLM context.
+        """
+        parts: list[str] = []
+        for detail in page_layout:
+            raw = str(detail.get("content") or "").strip()
+            if not raw:
+                continue
+            label = str(detail.get("label") or "").lower()
+            if label == "table" and "<table" in raw.lower():
+                converted = self._convert_html_table_to_markdown(raw)
+                if converted:
+                    parts.append(converted)
+            else:
+                parts.append(raw)
+        return "\n".join(parts).strip()
+
+    @staticmethod
+    def _convert_html_table_to_markdown(html: str) -> str:
+        """Convert an HTML ``<table>`` fragment to a Markdown table.
+
+        Uses Python's built-in :class:`html.parser.HTMLParser` so no
+        extra dependencies are required.  Falls back to stripping all
+        HTML tags and returning the plain cell text when the table
+        structure cannot be reliably reconstructed.
+        """
+        parser = _HTMLTableParser()
+        try:
+            parser.feed(html)
+        except Exception:
+            return re.sub(r"<[^>]+>", " ", html).strip()
+
+        rows = parser.rows
+        if not rows:
+            return re.sub(r"<[^>]+>", " ", html).strip()
+
+        # Expand colspan / rowspan into a regular grid
+        grid = _expand_spans(rows)
+        if not grid:
+            return re.sub(r"<[^>]+>", " ", html).strip()
+
+        # Build Markdown table
+        col_count = max(len(row) for row in grid)
+        normalised = [
+            [row[c] if c < len(row) else "" for c in range(col_count)]
+            for row in grid
+        ]
+
+        lines: list[str] = []
+        header = normalised[0]
+        lines.append("| " + " | ".join(header) + " |")
+        lines.append("| " + " | ".join("---" for _ in header) + " |")
+        for row in normalised[1:]:
+            if row == header:
+                continue  # Skip repeated header rows (e.g. multi-page tables)
+            lines.append("| " + " | ".join(row) + " |")
+        return "\n".join(lines)
 
     def _format_page_range(self, page_range: OCRPageRange) -> str:
         """Format a zero-based range as a one-based inclusive display range."""
@@ -657,3 +712,104 @@ class GLMOCRTool:
             score -= 0.15
 
         return max(0.0, min(1.0, score))
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers for HTML table → Markdown conversion
+# ---------------------------------------------------------------------------
+
+class _CellInfo:
+    """Parsed data for a single ``<td>`` / ``<th>`` cell."""
+
+    __slots__ = ("text", "colspan", "rowspan", "is_header")
+
+    def __init__(self, *, colspan: int = 1, rowspan: int = 1, is_header: bool = False):
+        self.text: str = ""
+        self.colspan = colspan
+        self.rowspan = rowspan
+        self.is_header = is_header
+
+
+class _HTMLTableParser(HTMLParser):
+    """Minimal HTML parser that extracts table rows and cells.
+
+    Each element of :attr:`rows` is a list of :class:`_CellInfo` objects
+    representing one ``<tr>``.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.rows: list[list[_CellInfo]] = []
+        self._current_row: list[_CellInfo] | None = None
+        self._current_cell: _CellInfo | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag_lower = tag.lower()
+        if tag_lower == "tr":
+            self._current_row = []
+        elif tag_lower in ("td", "th"):
+            attr_map = dict(attrs)
+            colspan = max(1, int(attr_map.get("colspan", "1") or "1"))
+            rowspan = max(1, int(attr_map.get("rowspan", "1") or "1"))
+            self._current_cell = _CellInfo(
+                colspan=colspan,
+                rowspan=rowspan,
+                is_header=tag_lower == "th",
+            )
+
+    def handle_endtag(self, tag: str) -> None:
+        tag_lower = tag.lower()
+        if tag_lower in ("td", "th") and self._current_cell is not None:
+            self._current_cell.text = re.sub(
+                r"\s+", " ", self._current_cell.text,
+            ).strip()
+            if self._current_row is not None:
+                self._current_row.append(self._current_cell)
+            self._current_cell = None
+        elif tag_lower == "tr" and self._current_row is not None:
+            self.rows.append(self._current_row)
+            self._current_row = None
+
+    def handle_data(self, data: str) -> None:
+        if self._current_cell is not None:
+            self._current_cell.text += data
+
+
+def _expand_spans(rows: list[list[_CellInfo]]) -> list[list[str]]:
+    """Expand ``colspan`` / ``rowspan`` into a flat grid of string cells."""
+    if not rows:
+        return []
+
+    # First pass: determine the grid width
+    max_cols = 0
+    for row in rows:
+        cols = sum(cell.colspan for cell in row)
+        if cols > max_cols:
+            max_cols = cols
+    if max_cols == 0:
+        return []
+
+    num_rows = len(rows)
+    grid: list[list[str | None]] = [[None] * max_cols for _ in range(num_rows)]
+
+    for r_idx, row in enumerate(rows):
+        c_target = 0
+        for cell in row:
+            # Advance past cells already filled by prior rowspans
+            while c_target < max_cols and grid[r_idx][c_target] is not None:
+                c_target += 1
+            if c_target >= max_cols:
+                break
+            for dr in range(cell.rowspan):
+                for dc in range(cell.colspan):
+                    tr = r_idx + dr
+                    tc = c_target + dc
+                    if tr < num_rows and tc < max_cols:
+                        grid[tr][tc] = cell.text
+            c_target += cell.colspan
+
+    # Replace any remaining None with empty string
+    return [
+        [cell if cell is not None else "" for cell in row]
+        for row in grid
+    ]

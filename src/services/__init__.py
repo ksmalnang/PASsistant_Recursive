@@ -2,7 +2,7 @@
 
 from src.services.contracts import (
     ChatAgent,
-    DocumentChunkIndexer,
+    DocumentIndexer,
     DocumentProcessor,
     DocumentRetriever,
     DocumentTextExtractor,
@@ -19,6 +19,7 @@ from src.services.document_processing import (
     DocumentProcessingResult,
     DocumentProcessingService,
 )
+from src.services.indexing import DocumentIndexingService
 from src.services.intent import IntentClassifier
 from src.services.response_generation import (
     ResponseContextBuilder,
@@ -35,7 +36,8 @@ from src.utils.state import OCRResult
 
 __all__ = [
     "ChatAgent",
-    "DocumentChunkIndexer",
+    "DocumentIndexer",
+    "DocumentIndexingService",
     "DocumentIngestionService",
     "DocumentProcessingResult",
     "DocumentProcessingService",
