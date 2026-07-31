@@ -104,9 +104,7 @@ def _build_sequential_llm_class() -> Any:
             stop: list[str] | None = None,
             callbacks: Any = None,
         ) -> Any:
-            raise NotImplementedError(
-                "_SequentialOpenRouterLLM only supports async generation"
-            )
+            raise NotImplementedError("_SequentialOpenRouterLLM only supports async generation")
 
         async def agenerate_text(
             self,
@@ -266,7 +264,9 @@ class RagasEvaluator:
     def _apply_fixtures(self, samples: list[RagasEvalSample]) -> list[RagasEvalSample]:
         progress = ProgressTracker(len(samples), "Fixture")
         if self.config.fixture_path is None:
-            logger.info("Fixture mode: using dataset-provided contexts and responses (no fixture file)")
+            logger.info(
+                "Fixture mode: using dataset-provided contexts and responses (no fixture file)"
+            )
             for sample in samples:
                 if sample.response:
                     sample.retrieved_contexts = list(sample.provided_contexts)
@@ -274,7 +274,9 @@ class RagasEvaluator:
             return samples
 
         fixtures = load_fixtures(self.config.fixture_path)
-        logger.info("Fixture mode: loading pre-computed responses from %s", self.config.fixture_path.name)
+        logger.info(
+            "Fixture mode: loading pre-computed responses from %s", self.config.fixture_path.name
+        )
         for sample in samples:
             fixture = fixtures.get(sample.id, {})
             sample.response = fixture.get("response", "")
@@ -285,7 +287,9 @@ class RagasEvaluator:
     async def _run_live_pipeline(self, samples: list[RagasEvalSample]) -> list[RagasEvalSample]:
         self._init_pipeline_services()
         progress = ProgressTracker(len(samples), "Pipeline")
-        logger.info("Live pipeline: running retrieval + response generation for %d samples", len(samples))
+        logger.info(
+            "Live pipeline: running retrieval + response generation for %d samples", len(samples)
+        )
 
         for idx, sample in enumerate(samples, start=1):
             sample_start = time.perf_counter()

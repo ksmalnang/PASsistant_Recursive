@@ -66,6 +66,12 @@ class VectorStoreTools(
                 model=self.embedding_model,
                 api_key=SecretStr(self.openai_api_key),
                 base_url=self.openai_base_url,
+                check_embedding_ctx_length=False,
+                model_kwargs={
+                    "extra_body": {
+                        "provider": {"order": ["deepinfra"], "allow_fallbacks": False}
+                    }
+                },
             )
         return self.embeddings
 
