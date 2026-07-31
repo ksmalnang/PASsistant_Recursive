@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
+import signal
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -66,7 +68,15 @@ def _parse_args() -> argparse.Namespace:
     return parse_args()
 
 
+def _force_exit(sig: int, frame: object) -> None:  # noqa: ARG001
+    print("\n[Interrupted] Forcing exit — killing all threads.", flush=True)
+    os._exit(1)
+
+
 def main() -> None:
+    signal.signal(signal.SIGINT, _force_exit)
+    signal.signal(signal.SIGTERM, _force_exit)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",

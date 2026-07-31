@@ -9,21 +9,7 @@ A **LangGraph-powered RAG chatbot** for Universitas Pasundan's Faculty of Engine
 - [Features](#features)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
-- [API Endpoints](#api-endpoints)
-- [Document Management](#document-management)
-- [Evaluation](#evaluation)
-- [Environment Variables](#environment-variables)
-- [Development](#development)
-- [Documentation](#documentation)
-- [Tech Stack](#tech-stack)
-
----
-
-## Table of Contents
-
-- [Features](#features)
-- [Architecture](#architecture)
-- [Quick Start](#quick-start)
+- [Launch Options](#launch-options)
 - [API Endpoints](#api-endpoints)
 - [Document Management](#document-management)
 - [Evaluation](#evaluation)
@@ -48,7 +34,7 @@ A **LangGraph-powered RAG chatbot** for Universitas Pasundan's Faculty of Engine
 - **RAGAS Evaluation** — Automated RAG quality assessment with Faithfulness, Answer Relevancy, Context Precision, and Context Recall
 - **Session Management** — In-memory session tracking for continuous conversations
 - **Rate Limiting** — In-memory rolling window rate limiting per IP
-- **Multi-channel** — REST API, WebSocket streaming (with SSE resume via `Last-Event-ID`), and Telegram bot integration (including photo/image uploads)
+- **Multi-channel** — Interactive CLI, Web-based Streamlit UI, REST API, WebSocket streaming (with SSE resume via `Last-Event-ID`), and Telegram bot integration (including photo/image uploads)
 
 ---
 
@@ -111,7 +97,7 @@ flowchart LR
 - Python 3.11+
 - [UV](https://docs.astral.sh/uv/getting-started/installation/) package manager
 - Docker (for Qdrant & Redis)
-- API keys: OpenAI-compatible provider (e.g. OpenRouter), Zhipu AI (GLM-4 OCR)
+- API keys: OpenAI-compatible provider (e.g. OpenRouter), Zhipu AI (GLM-OCR), Jina AI (for reranking, optional) — see [docs/api-keys.md](docs/api-keys.md) for how to obtain them.
 
 ### Setup
 
@@ -119,8 +105,8 @@ flowchart LR
 git clone <repo-url>
 cd PASsistant
 
-# Install dependencies
-uv sync --dev
+# Install all dependencies (including dev and evaluation tools)
+uv sync --all-extras
 
 # Configure environment
 cp .env.example .env
@@ -129,32 +115,51 @@ cp .env.example .env
 
 ### Run Infrastructure
 
+Ensure your local vector database and caching layers are up and running:
+
 ```bash
-# Qdrant vector database
+# Start Qdrant vector database (via Docker or local script)
 docker run -p 6333:6333 -p 6334:6334 \
   -v $(pwd)/qdrant_storage:/qdrant/storage \
   qdrant/qdrant
 
-# Redis (optional, for caching)
+# Alternatively, run via the provided script:
+bash scripts/run_qdrant.sh
+
+# Start Redis (required for caching search results)
 docker run -p 6379:6379 redis:7-alpine
 ```
 
-### Launch
+---
 
+## Launch Options
+
+PASsistant supports multiple interface options to interact with and manage the chatbot workflow:
+
+### 1. Interactive CLI Client
+Great for quick, lightweight testing directly in your terminal.
 ```bash
-# REST API server
-uv run uvicorn src.api:app --reload --port 8000
-
-# Telegram bot (polling mode for dev)
-uv run python -m src.telegram_bot.polling
+uv run chatbot
 ```
 
-### Ingest Documents
-
+### 2. Streamlit Web UI (Chat Hub & Admin Dashboard)
+Includes an interactive web application with real-time streaming, document citations, and an administrative dashboard to manage ingested files and view system health analytics.
 ```bash
-curl -X POST http://localhost:8000/upload \
-  -F "files=@Kurikulum_IF_2021.pdf" \
-  -F "files=@Buku_Panduan_Akademik.pdf"
+uv run frontend
+```
+*Note: The frontend connects to the REST API server, so ensure the backend server (below) is running on port 8000.*
+
+### 3. REST API Server
+Runs the FastAPI backend that handles LangGraph execution, WebSockets, SSE streams, and document ingestion.
+```bash
+uv run uvicorn src.api:app --reload --port 8000
+```
+Interactive Swagger API documentation is available at `http://localhost:8000/docs`.
+
+### 4. Telegram Bot (Polling Mode for Dev)
+Runs the Telegram bot integration locally using long polling:
+```bash
+uv run python -m src.telegram_bot.polling
 ```
 
 ---
@@ -180,14 +185,16 @@ curl -X POST http://localhost:8000/upload \
 ## Document Management
 
 ```bash
+# Ingest raw academic handbook or syllabus PDFs
+curl -X POST http://localhost:8000/upload \
+  -F "files=@Kurikulum_IF_2021.pdf" \
+  -F "files=@Buku_Panduan_Akademik.pdf"
+
 # List all ingested documents
 curl http://localhost:8000/documents
 
 # Delete a specific document (re-ingest after pipeline changes)
 curl -X DELETE "http://localhost:8000/documents/by-filename/Kurikulum%20IF%202021.pdf"
-
-# Re-upload
-curl -X POST http://localhost:8000/upload -F "files=@Kurikulum_IF_2021.pdf"
 ```
 
 ---
@@ -198,14 +205,14 @@ Run RAGAS evaluation to measure retrieval and generation quality:
 
 ```bash
 # Live evaluation against current index
-uv run python -m src.eval.ragas \
-    --dataset tests/fixtures/ragas_dataset.jsonl \
-    --mode live
+uv run ragas-eval --dataset tests/fixtures/ragas_dataset.jsonl --mode live
 
 # From pre-computed fixtures (no API calls for pipeline)
-uv run python -m src.eval.ragas \
-    --dataset tests/fixtures/ragas_dataset.jsonl \
-    --mode fixture
+uv run ragas-eval --dataset tests/fixtures/ragas_dataset.jsonl --mode fixture
+```
+*Alternatively, run evaluator via standard python module command:*
+```bash
+uv run python -m src.eval.ragas --dataset tests/fixtures/ragas_dataset.jsonl --mode live
 ```
 
 See [docs/evaluation.md](docs/evaluation.md) for full evaluation guide.
@@ -260,6 +267,7 @@ uv run basedpyright src/
 bash scripts/setup.sh                  # Full project setup
 bash scripts/run_qdrant.sh             # Launch Qdrant via Docker
 python scripts/build_ragas_dataset.py  # Validate eval dataset
+python scripts/run_retrieval_smoke_test.py # Smoke test search pipelines
 ```
 
 ---
@@ -271,7 +279,7 @@ python scripts/build_ragas_dataset.py  # Validate eval dataset
 
 ```text
 src/
-├── agent.py                 # LangGraph app entry point
+├── agent.py                 # LangGraph app entry point & CLI testing client
 ├── api/                     # FastAPI REST + WebSocket layer
 │   ├── routes/              # Endpoint handlers
 │   ├── models.py            # Pydantic schemas
@@ -279,6 +287,9 @@ src/
 │   └── sessions.py          # In-memory session manager
 ├── config/                  # Pydantic settings and structured logging
 ├── eval/                    # RAGAS evaluation framework
+├── frontend/                # Streamlit Web App (Chat & Admin Dashboard)
+│   ├── app.py               # Main Streamlit interface logic
+│   └── run_frontend.py      # Entrypoint subprocess script
 ├── graphs/                  # LangGraph workflow definition
 ├── guardrails/              # Input/output safety filters & rate limiting
 ├── services/                # Business logic (intent, response, indexing)
@@ -299,6 +310,7 @@ src/
 
 | Document | Description |
 |----------|-------------|
+| [docs/api-keys.md](docs/api-keys.md) | Guide to obtaining external API credentials |
 | [docs/architecture.md](docs/architecture.md) | System architecture and pipeline design |
 | [docs/retrieval-pipeline.md](docs/retrieval-pipeline.md) | Retrieval strategy and indexing details |
 | [docs/evaluation.md](docs/evaluation.md) | RAGAS evaluation guide |
@@ -317,6 +329,7 @@ src/
 | Embeddings | Configurable (Qwen, OpenAI, etc.) |
 | Reranker | Jina Reranker v2 / FastEmbed cross-encoder |
 | API | FastAPI + Uvicorn |
+| Web UI | Streamlit |
 | Caching | Redis |
 | Guardrails | Input/Output Guards |
 | Security | In-memory Rate Limiting |
