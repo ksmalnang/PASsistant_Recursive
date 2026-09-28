@@ -1,5 +1,6 @@
-"""
-FastAPI REST API for the academic services and student records chatbot.
+"""FastAPI REST API for PASsistant.
+
+LangGraph-powered chatbot for academic services with OCR, RAG, and Qdrant.
 
 Provides HTTP endpoints for:
 - Chat interactions (WebSocket and REST)
@@ -11,13 +12,16 @@ Usage:
 """
 
 import logging
+import tomllib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
+from src.__version__ import __version__
 from src.api.routes.router import router
 from src.config import build_logging_config, configure_logging, get_settings
 from src.guardrails.rate_limit import InMemoryRateLimiter
@@ -27,21 +31,44 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+def _get_project_metadata() -> dict[str, str]:
+    """Load project metadata directly from pyproject.toml."""
+    pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    name = "PASsistant"
+    description = "LangGraph-powered chatbot for academic services with OCR, RAG, and Qdrant"
+
+    if pyproject_path.is_file():
+        try:
+            with open(pyproject_path, "rb") as f:
+                data = tomllib.load(f).get("project", {})
+                raw_name = data.get("name", name)
+                name = "PASsistant" if raw_name.lower() == "passistant" else raw_name
+                description = data.get("description", description)
+        except Exception:
+            logger.warning("Could not load pyproject.toml; using default metadata.")
+
+    return {
+        "title": f"{name} API",
+        "description": description,
+        "version": __version__,
+    }
+
+
+_meta = _get_project_metadata()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
-    logger.info("Starting academic services and student records chatbot API")
+    logger.info("Starting %s", app.title)
     yield
-    logger.info("Shutting down API")
+    logger.info("Shutting down %s", app.title)
 
 
 app = FastAPI(
-    title="Academic Services and Student Records Chatbot API",
-    description=(
-        "Production-ready LangGraph chatbot API for academic-service questions, "
-        "chat interactions, and document ingestion backed by retrieval indexing"
-    ),
-    version="0.1.0",
+    title=_meta["title"],
+    description=_meta["description"],
+    version=_meta["version"],
     openapi_version="3.0.3",
     lifespan=lifespan,
 )

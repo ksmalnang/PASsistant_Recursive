@@ -274,6 +274,8 @@ python scripts/run_retrieval_smoke_test.py # Smoke test search pipelines
 
 ## Project Structure
 
+For a detailed explanation of every major folder, source package, test area, and common change location, see [docs/project-structure.md](docs/project-structure.md).
+
 <details>
 <summary>Click to expand</summary>
 
@@ -315,6 +317,7 @@ src/
 | [docs/retrieval-pipeline.md](docs/retrieval-pipeline.md) | Retrieval strategy and indexing details |
 | [docs/evaluation.md](docs/evaluation.md) | RAGAS evaluation guide |
 | [docs/deployment.md](docs/deployment.md) | Deployment and infrastructure guide |
+| [docs/project-structure.md](docs/project-structure.md) | Detailed repository and source-code structure guide |
 
 ---
 

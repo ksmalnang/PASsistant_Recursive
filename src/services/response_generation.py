@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from langchain_core.messages import AIMessage, SystemMessage
@@ -91,6 +92,19 @@ class CitationBuilder:
 
     _SNIPPET_LIMIT = 240
 
+    # Matches raw UUIDs (e.g. "3fa85f64-5717-4562-b3fc-2c963f66afa6") that
+    # sometimes leak into chunk/section identifiers.
+    _UUID_RE = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        re.IGNORECASE,
+    )
+    # Matches internal chunk-pointer fragments like "doc123:chunk:5".
+    _CHUNK_ID_RE = re.compile(
+        r"(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|"
+        r":chunk:\d+|(?:parent|child)-chunk|chunk[_-]\d+)",
+        re.IGNORECASE,
+    )
+
     def __init__(self, limit: int | None = None):
         self.limit = limit or get_settings().RETRIEVAL_TOP_K
 
@@ -164,9 +178,32 @@ class CitationBuilder:
         except (TypeError, ValueError):
             return None
 
+    @classmethod
+    def _is_internal_id(cls, value: str) -> bool:
+        """Return True when a value looks like an internal UUID/chunk pointer
+        rather than a human-meaningful structural label."""
+        return bool(cls._UUID_RE.search(value) or cls._CHUNK_ID_RE.search(value))
+
     def _section_label(self, chunk: dict[str, Any]) -> str | None:
-        """Return the most readable structural label for a citation."""
-        return chunk.get("section_id") or chunk.get("chunk_id")
+        """Return the most readable structural label for a citation.
+
+        Falls back through section_id -> chunk_id, but skips either one if it
+        looks like an internal UUID or chunk pointer (e.g. "a1b2c3d4-...-...",
+        "doc42:chunk:7") rather than a meaningful label like "BAB II > Pasal 3"
+        or "3.1 Profil Lulusan".
+        """
+        for candidate in (
+            chunk.get("breadcrumb"),
+            chunk.get("section_id"),
+            chunk.get("chunk_id"),
+        ):
+            if not candidate:
+                continue
+            candidate_str = str(candidate)
+            if self._is_internal_id(candidate_str):
+                continue
+            return candidate_str
+        return None
 
     def _score(self, chunk: dict[str, Any]) -> float | None:
         """Normalize the final ranking score when present."""
@@ -192,6 +229,10 @@ class CitationBuilder:
 class ResponseGenerationService:
     """Generate assistant responses from current workflow state."""
 
+    # Matches inline citation markers like "[1]", "[2]" that the model places
+    # in the body of its response.
+    _CITATION_MARKER_RE = re.compile(r"\[(\d+)\]")
+
     def __init__(
         self,
         context_builder: ResponseContextBuilder | None = None,
@@ -210,7 +251,7 @@ class ResponseGenerationService:
             context = self._context_builder.build(state)
             citations = self._citation_builder.build(state.retrieved_chunks)
             response = self._invoke_response_llm(state, context)
-            response_content = self._append_citation_footer(
+            response_content, active_citations = self._append_citation_footer(
                 content=str(response.content),
                 citations=citations,
             )
@@ -219,7 +260,7 @@ class ResponseGenerationService:
                 "draft_response": response_content,
                 "messages": [AIMessage(content=response_content)],
                 "turn_count": state.turn_count + 1,
-                "citations": citations,
+                "citations": active_citations,
             }
         except Exception as exc:
             logger.error("Response generation failed: %s", exc)
@@ -277,22 +318,52 @@ class ResponseGenerationService:
             "and student record questions."
         )
 
-    def _append_citation_footer(self, content: str, citations: list[Citation]) -> str:
-        """Append a deterministic source list when document citations exist."""
-        if not citations or "\nSources:" in content:
-            return content
+    def _append_citation_footer(
+        self, content: str, citations: list[Citation]
+    ) -> tuple[str, list[Citation]]:
+        """Append a deterministic source list, but only for citations that are
+        actually referenced ("[1]", "[2]", ...) somewhere in the response body.
+
+        Returns the (possibly footer-appended) content alongside the list of
+        citations that ended up "active" (i.e. actually cited), so callers can
+        keep `state.citations` in sync with what's visibly footnoted.
+        """
+        if "\nSources:" in content:
+            # Footer already present (e.g. re-processed content) - leave as is.
+            return content, citations
+
+        if not citations:
+            return content, []
+
+        cited_ids = {int(match) for match in self._CITATION_MARKER_RE.findall(content)}
+        if not cited_ids:
+            # Model didn't cite anything inline - don't bolt on an orphan footer.
+            return content, []
+
+        active_citations = [citation for citation in citations if citation.id in cited_ids]
+        if not active_citations:
+            return content, []
 
         source_lines = ["", "Sources:"]
         source_lines.extend(
-            f"[{citation.id}] {self._format_citation_label(citation)}" for citation in citations
+            f"[{citation.id}] {self._format_citation_label(citation)}"
+            for citation in active_citations
         )
-        return f"{content.rstrip()}\n" + "\n".join(source_lines)
+        return f"{content.rstrip()}\n" + "\n".join(source_lines), active_citations
 
     def _format_citation_label(self, citation: Citation) -> str:
-        """Format one citation label for the visible source footer."""
+        """Format one citation label for the visible source footer.
+
+        Never surfaces raw internal identifiers (UUIDs, "doc:chunk:N"
+        pointers) - only human-meaningful structural labels make it in.
+        """
         label = citation.filename or citation.title or "Retrieved document"
-        if citation.section:
-            label = f"{label} :: {citation.section}"
+
+        section = citation.section
+        if section and not CitationBuilder._is_internal_id(str(section)):
+            label = f"{label} :: {section}"
+
         if citation.page is not None:
             label = f"{label} (p. {citation.page})"
+
         return label
