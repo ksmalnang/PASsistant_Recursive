@@ -1,7 +1,7 @@
 [project]
 name = "passistant"
 dynamic = ["version"]
-description = "LangGraph-powered chatbot for academic services and student records with OCR, RAG, and Qdrant"
+description = "LangGraph-powered chatbot for academic services with OCR, RAG, and Qdrant"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
