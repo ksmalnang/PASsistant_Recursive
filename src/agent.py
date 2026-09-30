@@ -6,9 +6,9 @@ It handles configuration, compilation, and execution of the chatbot workflow.
 
 Usage:
     # Programmatic usage
-    from src.agent import StudentRecordsAgent
+    from src.agent import PASsistantAgent
 
-    agent = StudentRecordsAgent()
+    agent = PASsistantAgent()
     result = await agent.chat("Upload this transcript", files=[("transcript.pdf", bytes)])
 
     # LangGraph deployment (langgraph.json entry point)
@@ -53,7 +53,7 @@ def _message_content_to_text(content: Any) -> str:
     return str(content)
 
 
-class StudentRecordsAgent:
+class PASsistantAgent:
     """
     High-level interface for the academic services and student records chatbot.
 
@@ -61,7 +61,7 @@ class StudentRecordsAgent:
     for common operations like chatting and document uploads.
 
     Example:
-        agent = StudentRecordsAgent()
+        agent = PASsistantAgent()
 
         # Simple chat
         response = await agent.chat("What is John's GPA?")
@@ -308,7 +308,7 @@ async def main() -> None:
     print("Type 'quit' to exit, 'upload <filepath>' to upload a document")
     print("=" * 60)
 
-    agent = StudentRecordsAgent()
+    agent = PASsistantAgent()
 
     while True:
         try:
