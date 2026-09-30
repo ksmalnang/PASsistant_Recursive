@@ -84,6 +84,11 @@ indent-style = "space"
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "smoke: production-readiness checks against a live local server",
+    "system: opt-in end-to-end tests that need live Qdrant, Redis, and LLM credentials",
+    "regression: release gates that re-run the mapped test subsets",
+]
 
 # --- BasedPyright Configuration ---
 [tool.basedpyright]
