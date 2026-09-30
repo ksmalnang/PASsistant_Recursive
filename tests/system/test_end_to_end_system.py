@@ -255,7 +255,8 @@ async def test_system_007_output_guard_masks_pii_in_generated_answer(
     scripted_llm = _ScriptedPipelineLLM(
         f"Hubungi pembimbing akademik di {email} atau NIM {nim} untuk konfirmasi."
     )
-    monkeypatch.setattr("src.utils.nodes.llm.ChatOpenAI", lambda **kwargs: scripted_llm)
+    monkeypatch.setattr("src.clients.llm._llm_instance", None)
+    monkeypatch.setattr("src.clients.llm.ChatOpenAI", lambda **kwargs: scripted_llm)
 
     response = await system_api_client.post("/chat", json=make_chat_payload("halo"))
 

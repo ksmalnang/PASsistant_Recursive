@@ -103,3 +103,14 @@ class DocumentProcessingNode:
             Fully processed DocumentUpload
         """
         return await self._ingestion_service.ingest_upload(file_bytes, filename)
+
+
+_default_document_processor: DocumentProcessingNode | None = None
+
+
+def get_document_processor() -> DocumentProcessingNode:
+    """Return the process-wide document processor."""
+    global _default_document_processor
+    if _default_document_processor is None:
+        _default_document_processor = DocumentProcessingNode()
+    return _default_document_processor

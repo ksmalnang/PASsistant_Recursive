@@ -2,7 +2,7 @@
 
 from fastapi import UploadFile
 
-from src.utils.nodes import DocumentProcessingNode
+from src.utils.nodes.document_processing import DocumentProcessingNode, get_document_processor
 
 
 async def read_upload_files(files: list[UploadFile]) -> list[tuple[str, bytes]]:
@@ -15,5 +15,5 @@ async def read_upload_files(files: list[UploadFile]) -> list[tuple[str, bytes]]:
 
 
 def create_document_processor() -> DocumentProcessingNode:
-    """Create the default document processor."""
-    return DocumentProcessingNode()
+    """Return the process-wide document processor."""
+    return get_document_processor()

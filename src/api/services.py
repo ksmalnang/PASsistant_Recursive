@@ -22,7 +22,7 @@ from src.api.models import (
     ChatStreamEventType,
     DocumentIngestionResponse,
 )
-from src.api.sessions import get_or_create_agent
+from src.api.sessions import get_or_create_agent, session_manager
 from src.services.contracts import ChatAgent, DocumentProcessor, SessionManager
 
 logger = logging.getLogger(__name__)
@@ -178,6 +178,11 @@ class ChatRouteService:
         agent, active_thread_id = self._session_manager.get_or_create(thread_id)
 
         async with self._run_lock:
+            self._active_runs = {
+                thread: run
+                for thread, run in self._active_runs.items()
+                if self._session_manager.contains(thread)
+            }
             existing = self._active_runs.get(active_thread_id)
             if existing is not None and (not existing.done.is_set() or last_event_id):
                 return existing, False
@@ -187,9 +192,8 @@ class ChatRouteService:
             self._active_runs[active_thread_id] = run_state
             run_state.task = asyncio.create_task(
                 self._produce_run_events(
+                    run_state=run_state,
                     agent=agent,
-                    thread_id=active_thread_id,
-                    run_id=run_id,
                     message=message,
                     files=files,
                 )
@@ -226,14 +230,12 @@ class ChatRouteService:
     async def _produce_run_events(
         self,
         *,
+        run_state: _RunStreamState,
         agent: ChatAgent,
-        thread_id: str,
-        run_id: str,
         message: str,
         files: list[tuple[str, bytes]] | None,
     ) -> None:
         """Drive agent streaming and broadcast normalized API events."""
-        run_state = self._active_runs[thread_id]
         emitted_text = ""
         final_state: Any | None = None
 
@@ -464,6 +466,10 @@ class _SessionManagerAdapter:
     def get_or_create(self, thread_id: str | None = None) -> tuple[ChatAgent, str]:
         """Delegate session access to the existing module function."""
         return get_or_create_agent(thread_id)
+
+    def contains(self, thread_id: str) -> bool:
+        """Delegate liveness checks to the shared session registry."""
+        return session_manager.contains(thread_id)
 
 
 chat_service = ChatRouteService(session_manager=_SessionManagerAdapter())

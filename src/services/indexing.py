@@ -10,8 +10,8 @@ from typing import Any
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client.http.models import PointStruct
 
+from src.clients.redis import RedisCache, get_cache
 from src.config import get_settings
-from src.utils.cache import RedisCache, get_cache
 from src.utils.state import DocumentUpload
 
 logger = logging.getLogger(__name__)

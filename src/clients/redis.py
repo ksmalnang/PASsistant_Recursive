@@ -146,3 +146,9 @@ def get_cache() -> RedisCache:
             default_ttl_seconds=settings.REDIS_CACHE_TTL_SECONDS,
         )
     return _cache_instance
+
+
+def close_cache() -> None:
+    """Close the process-wide cache client if one was created."""
+    if _cache_instance is not None and _cache_instance.client is not None:
+        _cache_instance.client.close()

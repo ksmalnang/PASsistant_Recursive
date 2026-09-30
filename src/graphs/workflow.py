@@ -7,20 +7,20 @@ compiling into a runnable LangGraph application.
 
 import logging
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 
 from src.services.contracts import StateNode
 from src.utils.nodes import (
-    DocumentProcessingNode,
     ErrorHandlerNode,
     ResponseNode,
     RetrievalNode,
     RouterNode,
     StudentRecordNode,
 )
+from src.utils.nodes.document_processing import get_document_processor
 from src.utils.state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ def create_default_nodes() -> WorkflowNodes:
     """Create the default workflow node instances."""
     return WorkflowNodes(
         router=RouterNode(),
-        document_processor=DocumentProcessingNode(),
+        document_processor=get_document_processor(),
         student_handler=StudentRecordNode(),
         retrieval=RetrievalNode(),
         response=ResponseNode(),
@@ -323,3 +323,14 @@ def compile_app(checkpointer=None, nodes: WorkflowNodes | None = None):
         "Application compiled with checkpointer: %s", type(checkpointer).__name__
     )
     return app
+
+
+_default_app: Any | None = None
+
+
+def get_compiled_app() -> Any:
+    """Return the process-wide compiled application."""
+    global _default_app
+    if _default_app is None:
+        _default_app = compile_app()
+    return _default_app

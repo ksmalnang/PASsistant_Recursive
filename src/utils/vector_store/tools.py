@@ -3,12 +3,12 @@
 from typing import Any
 
 from langchain_core.embeddings import Embeddings
-from langchain_openai import OpenAIEmbeddings
-from pydantic import SecretStr
 from qdrant_client import QdrantClient
 
+from src.clients.embeddings import get_embeddings
+from src.clients.qdrant import get_qdrant_client
+from src.clients.redis import RedisCache, get_cache
 from src.config import get_settings
-from src.utils.cache import RedisCache, get_cache
 from src.utils.vector_store.bm25 import TOKEN_PATTERN, BM25VectorOperations
 from src.utils.vector_store.collection import CollectionOperations
 from src.utils.vector_store.reranker import RemoteReranker
@@ -31,17 +31,16 @@ class VectorStoreTools(
     _RRF_RANK_CONSTANT = 60
     _TOKEN_PATTERN = TOKEN_PATTERN
 
-    def __init__(self):
+    def __init__(
+        self,
+        client: QdrantClient | None = None,
+        cache: RedisCache | None = None,
+    ):
         settings = get_settings()
-        self.client = QdrantClient(
-            url=settings.QDRANT_URL,
-            api_key=settings.QDRANT_API_KEY,
-        )
+        self.client = client or get_qdrant_client()
+        self.cache = cache or get_cache()
         self.collection_name = settings.QDRANT_COLLECTION_NAME
         self.vector_size = settings.VECTOR_SIZE
-        self.openai_api_key = settings.OPENAI_API_KEY
-        self.openai_base_url = settings.OPENAI_BASE_URL
-        self.embedding_model = settings.EMBEDDING_MODEL
         self.retrieval_strategy = settings.RETRIEVAL_STRATEGY
         self.reranker_model = settings.RERANKER_MODEL
         self.reranker_base_url = settings.RERANKER_BASE_URL
@@ -50,30 +49,14 @@ class VectorStoreTools(
             settings.RERANKER_CANDIDATE_MULTIPLIER,
             1,
         )
-        self.embeddings: Embeddings | None = None
         self.reranker: Any | None = None
-        self.cache: RedisCache = get_cache()
         self.bm25_vector_name = self._BM25_VECTOR_NAME
         self.bm25_vectors_enabled: bool | None = None
         self._rrf_warning_emitted = False
 
     def _get_embeddings(self) -> Embeddings:
-        """Create embeddings client lazily to avoid import-time credential failures."""
-        if self.embeddings is None:
-            if not self.openai_api_key:
-                raise ValueError("OPENAI_API_KEY is required for embeddings")
-            self.embeddings = OpenAIEmbeddings(
-                model=self.embedding_model,
-                api_key=SecretStr(self.openai_api_key),
-                base_url=self.openai_base_url,
-                check_embedding_ctx_length=False,
-                model_kwargs={
-                    "extra_body": {
-                        "provider": {"order": ["deepinfra"], "allow_fallbacks": False}
-                    }
-                },
-            )
-        return self.embeddings
+        """Return the shared embeddings client, created lazily on first use."""
+        return get_embeddings()
 
     def _get_reranker(self) -> Any:
         """Create the reranker lazily so startup stays cheap when it is disabled."""
