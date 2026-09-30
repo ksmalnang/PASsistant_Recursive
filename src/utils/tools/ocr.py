@@ -23,6 +23,7 @@ from tenacity import (
 from zai import ZaiClient
 from zai.types.ocr.layout_parsing_resp import LayoutParsingResp
 
+from src.clients.ocr import get_zai_client
 from src.config import get_settings
 from src.utils.state import DocumentType, OCRResult
 
@@ -98,14 +99,17 @@ class GLMOCRTool:
         settings = get_settings()
         self.api_key = api_key if api_key is not None else settings.ZHIPU_API_KEY
         self.model = model if model is not None else settings.GLM_LAYOUT_MODEL
-        self.client = client
         self._max_retries = max_retries
 
-        if self.client is None and self.api_key:
+        if client is not None:
+            self.client = client
+        elif api_key is not None:
             self.client = ZaiClient(
-                api_key=self.api_key,
+                api_key=api_key,
                 timeout=120.0,
             )
+        else:
+            self.client = get_zai_client()
 
     async def extract_text(
         self,

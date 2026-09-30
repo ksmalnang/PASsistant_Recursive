@@ -9,8 +9,8 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage
 
+from src.clients.llm import get_llm
 from src.services.contracts import LLMProvider, StudentRecordRepository, StudentTextExtractor
-from src.utils.nodes.llm import get_llm
 from src.utils.nodes.prompts import STUDENT_RECORD_PROMPT
 from src.utils.state import AgentState, StudentRecord
 

@@ -6,8 +6,8 @@ from fastapi import APIRouter, HTTPException, status
 from qdrant_client import QdrantClient
 
 from src.api.models import DependencyHealthResponse, ErrorResponse, HealthResponse
+from src.clients.redis import get_cache
 from src.config import get_settings
-from src.utils.cache import get_cache
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

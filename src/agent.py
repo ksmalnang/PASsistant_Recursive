@@ -27,9 +27,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
 from src.config import configure_logging, get_settings
-from src.graphs.workflow import compile_app
+from src.graphs.workflow import compile_app, get_compiled_app
 from src.services.contracts import AgentStreamUpdate
-from src.utils.nodes import DocumentProcessingNode
+from src.utils.nodes.document_processing import DocumentProcessingNode, get_document_processor
 from src.utils.state import AgentState
 
 configure_logging()
@@ -76,7 +76,7 @@ class StudentRecordsAgent:
     def __init__(
         self,
         session_id: Optional[str] = None,
-        app_factory: Callable[..., Any] = compile_app,
+        app_factory: Callable[..., Any] | None = None,
         document_processor: DocumentProcessingNode | None = None,
         checkpointer: InMemorySaver | None = None,
     ):
@@ -85,12 +85,21 @@ class StudentRecordsAgent:
 
         Args:
             session_id: Optional session identifier for persistence
+            app_factory: Optional graph factory; the process-wide app is reused by default
+            document_processor: Optional document processor override
+            checkpointer: Optional checkpointer; forces a dedicated compiled app
         """
         self.settings = get_settings()
         self.session_id = session_id or str(uuid.uuid4())
-        self.checkpointer = checkpointer or InMemorySaver()
-        self.app = app_factory(checkpointer=self.checkpointer)
-        self.doc_processor = document_processor or DocumentProcessingNode()
+
+        if app_factory is None and checkpointer is None:
+            self.app = get_compiled_app()
+        else:
+            graph_factory: Callable[..., Any] = app_factory or compile_app
+            self.checkpointer = checkpointer or InMemorySaver()
+            self.app = graph_factory(checkpointer=self.checkpointer)
+
+        self.doc_processor = document_processor or get_document_processor()
 
         logger.info("Agent initialized with session: %s", self.session_id)
 
@@ -283,9 +292,8 @@ class StudentRecordsAgent:
 # LangGraph Deployment Entry Point
 # =============================================================================
 
-# Pre-compiled application for LangGraph deployment
-# This is imported by langgraph.json as the entry point
-compiled_app = compile_app()
+# Process-wide compiled application; imported by langgraph.json as the entry point
+compiled_app = get_compiled_app()
 
 
 # =============================================================================

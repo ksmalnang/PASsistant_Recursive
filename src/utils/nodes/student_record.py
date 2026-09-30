@@ -2,6 +2,8 @@
 
 import logging
 
+from src.clients.llm import get_llm
+from src.clients.student_records import get_student_repository
 from src.services.contracts import LLMProvider, StudentRecordRepository, StudentTextExtractor
 from src.services.student_records import (
     StudentDataExtractionService,
@@ -9,9 +11,8 @@ from src.services.student_records import (
     StudentRecordFactory,
     StudentRecordService,
 )
-from src.utils.nodes.llm import get_llm
 from src.utils.state import AgentState
-from src.utils.tools import StudentTools
+from src.utils.tools import RuleBasedStudentExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +51,8 @@ class StudentRecordNode:
         service: StudentRecordService | None = None,
         llm_provider: LLMProvider | None = None,
     ):
-        base_tools = StudentTools()
-        resolved_repository = repository or base_tools
-        resolved_extractor = fallback_extractor or base_tools
+        resolved_repository = repository or get_student_repository()
+        resolved_extractor = fallback_extractor or RuleBasedStudentExtractor()
         self._service = service or StudentRecordService(
             repository=resolved_repository,
             extractor=StudentDataExtractionService(

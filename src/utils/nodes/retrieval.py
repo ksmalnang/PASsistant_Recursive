@@ -7,9 +7,9 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage
 
+from src.clients.llm import get_llm
 from src.config import get_settings
 from src.services.contracts import DocumentRetriever
-from src.utils.nodes.llm import get_llm
 from src.utils.nodes.prompts import QUERY_REWRITE_PROMPT
 from src.utils.state import AgentState, DocumentType
 from src.utils.tools import VectorStoreTools

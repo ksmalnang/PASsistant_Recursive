@@ -23,6 +23,7 @@ from fastapi.openapi.utils import get_openapi
 
 from src.__version__ import __version__
 from src.api.routes.router import router
+from src.clients import close_all_clients
 from src.config import build_logging_config, configure_logging, get_settings
 from src.guardrails.rate_limit import InMemoryRateLimiter
 
@@ -62,6 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     logger.info("Starting %s", app.title)
     yield
+    close_all_clients()
     logger.info("Shutting down %s", app.title)
 
 

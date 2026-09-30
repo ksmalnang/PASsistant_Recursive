@@ -8,10 +8,10 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, SystemMessage
 
+from src.clients.llm import get_llm
 from src.config import get_settings
 from src.guardrails.output_guard import OutputGuard
 from src.services.contracts import LLMProvider
-from src.utils.nodes.llm import get_llm
 from src.utils.nodes.prompts import RESPONSE_SYSTEM_PROMPT
 from src.utils.state import AgentState, Citation
 

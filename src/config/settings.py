@@ -156,6 +156,7 @@ class Settings(BaseSettings):
     DATA_DIR: Path = Field(default=Path("data"))
     CORS_ALLOWED_ORIGINS: list[str] = Field(default_factory=lambda: ["*"])
     RATE_LIMIT_PER_MINUTE: int = Field(default=20)
+    SESSION_MAX_ACTIVE: int = Field(default=100)
 
     # --- Telegram Bot ---
     TELEGRAM_BOT_TOKEN: Optional[str] = Field(default=None)

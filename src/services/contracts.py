@@ -179,6 +179,10 @@ class SessionManager(Protocol):
         """Return an existing agent or create a new one."""
         ...
 
+    def contains(self, thread_id: str) -> bool:
+        """Whether a session is currently registered."""
+        ...
+
 
 @runtime_checkable
 class StateNode(Protocol):

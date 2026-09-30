@@ -8,8 +8,8 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage
 
+from src.clients.llm import get_llm
 from src.services.contracts import LLMProvider
-from src.utils.nodes.llm import get_llm
 from src.utils.nodes.prompts import ROUTER_INTENT_PROMPT
 
 logger = logging.getLogger(__name__)

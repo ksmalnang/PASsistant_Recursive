@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from langchain_core.embeddings import Embeddings
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue, SparseVector
 
-from src.utils.cache import RedisCache
+from src.clients.redis import RedisCache
 from src.utils.state import DocumentType
 
 logger = logging.getLogger(__name__)
