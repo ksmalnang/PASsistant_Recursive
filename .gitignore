@@ -74,9 +74,6 @@ qdrant_storage/
 # Zed
 .zed/
 
-# Streamlit
-.streamlit/secrets.toml
-
 # Assistant
 .agent
 .agents/

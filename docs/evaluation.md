@@ -58,7 +58,7 @@ uv run python -c "import ragas; print(ragas.__version__)"
 ```
 
 > **Jika `uv sync` gagal** karena error `Access is denied` pada file `.exe`:
-> ada proses lain yang mengunci file tersebut (biasanya Streamlit frontend masih berjalan).
+> ada proses lain yang mengunci file tersebut (biasanya server API masih berjalan).
 > Hentikan proses tersebut dulu, lalu ulangi `uv sync --extra eval`.
 
 ---
@@ -400,7 +400,7 @@ taskkill /F /IM python.exe
 
 ### `uv sync` gagal dengan `Access is denied`
 
-File `.exe` di `.venv/Scripts/` sedang digunakan oleh proses lain (biasanya Streamlit atau server).
+File `.exe` di `.venv/Scripts/` sedang digunakan oleh proses lain (biasanya server API).
 Hentikan semua proses Python terlebih dahulu, lalu ulangi perintah.
 
 ---

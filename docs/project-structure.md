@@ -6,7 +6,6 @@ This document explains how the PASsistant repository is organized, what each maj
 
 ```text
 PASsistant/
-├── .streamlit/              # Streamlit configuration
 ├── data/                    # Local data used by ingestion and development
 │   └── raw/                 # Source documents before processing
 ├── docs/                    # Technical and operational documentation
@@ -34,7 +33,6 @@ src/
 ├── api/
 ├── config/
 ├── eval/
-├── frontend/
 ├── graphs/
 ├── guardrails/
 ├── services/
@@ -46,15 +44,12 @@ src/
 
 - `src/agent.py` — Main LangGraph application entry point and interactive CLI client. It also exposes the compiled graph used by LangGraph deployment.
 - `src/api/__init__.py` — Creates the FastAPI application and registers API routes.
-- `src/frontend/app.py` — Streamlit chat interface and administration dashboard.
-- `src/frontend/run_frontend.py` — Starts the Streamlit application on port `8501`.
 - `src/telegram_bot/polling.py` — Runs the Telegram bot in polling mode for local development.
 
 The corresponding command-line entry points are declared in `pyproject.toml`:
 
 ```text
 uv run chatbot       # Interactive CLI
-uv run frontend      # Streamlit frontend
 uv run ragas-eval    # RAGAS evaluation
 ```
 
@@ -88,7 +83,7 @@ The graph coordinates intent routing, document processing, student-record lookup
 
 ### `src/services/` — Application business logic
 
-Services contain reusable operations that are independent of a particular transport such as HTTP, Streamlit, or Telegram.
+Services contain reusable operations that are independent of a particular transport such as HTTP or Telegram.
 
 - `contracts.py` — Shared service contracts and interfaces.
 - `document_processing.py` — Document processing and ingestion orchestration.
@@ -133,15 +128,6 @@ This package contains the shared state, graph node implementations, tools, cache
   - `bm25.py` — Sparse/BM25 retrieval.
   - `reranker.py` — Cross-encoder reranking.
   - `tools.py` — Vector-store helper functions.
-
-### `src/frontend/` — Streamlit application
-
-The frontend is intentionally separate from the API. It calls the backend rather than duplicating graph and service logic.
-
-- `app.py` — Chat UI, document-management controls, health information, and dashboard views.
-- `run_frontend.py` — Local/server entry point that launches Streamlit.
-
-Streamlit-specific settings are stored in `.streamlit/config.toml`.
 
 ### `src/telegram_bot/` — Telegram integration
 
@@ -222,7 +208,6 @@ uv run pytest
 | Change retrieval or ranking | `src/utils/vector_store/`, `src/utils/nodes/retrieval.py`, and `src/services/indexing.py` |
 | Change OCR or document ingestion | `src/utils/tools/ocr.py`, `src/utils/tools/document.py`, and `src/services/document_processing.py` |
 | Change prompts | `src/utils/nodes/prompts/` |
-| Change Streamlit UI | `src/frontend/app.py` and `.streamlit/config.toml` |
 | Change Telegram behavior | `src/telegram_bot/` and `src/api/routes/telegram.py` |
 | Add or modify configuration | `src/config/settings.py` |
 | Add tests or fixtures | `tests/` and `tests/fixtures/` |
@@ -235,7 +220,7 @@ A useful rule when adding code is to keep dependencies flowing inward:
 ```text
 External clients
     ↓
-API / Streamlit / Telegram adapters
+API / Telegram adapters
     ↓
 LangGraph workflow and nodes
     ↓
@@ -244,4 +229,4 @@ Services and shared state
 Tools, vector-store helpers, and external infrastructure
 ```
 
-For example, a new chat behavior should not be implemented only in the Streamlit page. Put the behavior in the workflow or service layer, then keep each interface responsible for translating its own input and output format.
+For example, a new chat behavior should not be implemented only in the Telegram adapter. Put the behavior in the workflow or service layer, then keep each interface responsible for translating its own input and output format.
