@@ -30,8 +30,6 @@ dependencies = [
     "zai-sdk>=0.2.2",
     "pypdf>=5.0.0",
     "langchain-text-splitters>=0.3.0",
-    "streamlit>=1.35.0",
-    "plotly>=5.22.0",
 ]
 
 [project.optional-dependencies]
@@ -50,7 +48,6 @@ dev = [
 [project.scripts]
 chatbot = "src.agent:main"
 ragas-eval = "src.eval.ragas:main"
-frontend = "src.frontend.run_frontend:main"
 
 [build-system]
 requires = ["hatchling"]

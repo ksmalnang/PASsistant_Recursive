@@ -34,7 +34,7 @@ A **LangGraph-powered RAG chatbot** for Universitas Pasundan's Faculty of Engine
 - **RAGAS Evaluation** — Automated RAG quality assessment with Faithfulness, Answer Relevancy, Context Precision, and Context Recall
 - **Session Management** — In-memory session tracking for continuous conversations
 - **Rate Limiting** — In-memory rolling window rate limiting per IP
-- **Multi-channel** — Interactive CLI, Web-based Streamlit UI, REST API, WebSocket streaming (with SSE resume via `Last-Event-ID`), and Telegram bot integration (including photo/image uploads)
+- **Multi-channel** — Interactive CLI, REST API, WebSocket streaming (with SSE resume via `Last-Event-ID`), and Telegram bot integration (including photo/image uploads)
 
 ---
 
@@ -142,21 +142,14 @@ Great for quick, lightweight testing directly in your terminal.
 uv run chatbot
 ```
 
-### 2. Streamlit Web UI (Chat Hub & Admin Dashboard)
-Includes an interactive web application with real-time streaming, document citations, and an administrative dashboard to manage ingested files and view system health analytics.
-```bash
-uv run frontend
-```
-*Note: The frontend connects to the REST API server, so ensure the backend server (below) is running on port 8000.*
-
-### 3. REST API Server
+### 2. REST API Server
 Runs the FastAPI backend that handles LangGraph execution, WebSockets, SSE streams, and document ingestion.
 ```bash
 uv run uvicorn src.api:app --reload --port 8000
 ```
 Interactive Swagger API documentation is available at `http://localhost:8000/docs`.
 
-### 4. Telegram Bot (Polling Mode for Dev)
+### 3. Telegram Bot (Polling Mode for Dev)
 Runs the Telegram bot integration locally using long polling:
 ```bash
 uv run python -m src.telegram_bot.polling
@@ -289,9 +282,6 @@ src/
 │   └── sessions.py          # In-memory session manager
 ├── config/                  # Pydantic settings and structured logging
 ├── eval/                    # RAGAS evaluation framework
-├── frontend/                # Streamlit Web App (Chat & Admin Dashboard)
-│   ├── app.py               # Main Streamlit interface logic
-│   └── run_frontend.py      # Entrypoint subprocess script
 ├── graphs/                  # LangGraph workflow definition
 ├── guardrails/              # Input/output safety filters & rate limiting
 ├── services/                # Business logic (intent, response, indexing)
@@ -332,7 +322,6 @@ src/
 | Embeddings | Configurable (Qwen, OpenAI, etc.) |
 | Reranker | Jina Reranker v2 / FastEmbed cross-encoder |
 | API | FastAPI + Uvicorn |
-| Web UI | Streamlit |
 | Caching | Redis |
 | Guardrails | Input/Output Guards |
 | Security | In-memory Rate Limiting |
