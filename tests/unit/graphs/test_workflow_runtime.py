@@ -3,14 +3,14 @@
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
-from src.agent import StudentRecordsAgent
+from src.agent import PASsistantAgent
 from src.graphs.workflow import get_compiled_app
 
 
 def test_unit_01_default_agents_share_compiled_app() -> None:
     """Agents without injection reuse one compiled application and one node set."""
-    first_agent = StudentRecordsAgent()
-    second_agent = StudentRecordsAgent()
+    first_agent = PASsistantAgent()
+    second_agent = PASsistantAgent()
 
     assert first_agent.app is second_agent.app
     assert first_agent.app is get_compiled_app()
@@ -19,7 +19,7 @@ def test_unit_01_default_agents_share_compiled_app() -> None:
 
 def test_unit_02_custom_checkpointer_still_isolated() -> None:
     """An injected checkpointer yields a dedicated compiled application."""
-    agent = StudentRecordsAgent(checkpointer=InMemorySaver())
+    agent = PASsistantAgent(checkpointer=InMemorySaver())
 
     assert agent.app is not get_compiled_app()
 

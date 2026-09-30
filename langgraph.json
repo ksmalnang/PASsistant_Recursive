@@ -1,7 +1,7 @@
 {
   "dockerfile_lines": [],
   "graphs": {
-    "student_records_agent": "./src/agent.py:compiled_app"
+    "passistant_agent": "./src/agent.py:compiled_app"
   },
   "env": ".env",
   "python_version": "3.11",
