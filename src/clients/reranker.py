@@ -1,4 +1,4 @@
-"""Remote reranker client."""
+"""Remote cross-encoder reranker client."""
 
 from typing import Any
 

@@ -31,6 +31,7 @@ The application uses a layered structure. API and user-interface adapters sit at
 src/
 ├── agent.py
 ├── api/
+├── clients/
 ├── config/
 ├── eval/
 ├── graphs/
@@ -67,6 +68,18 @@ The API layer exposes the application to external clients through FastAPI.
 - `services.py` — API-level orchestration around graph execution and streaming.
 - `sessions.py` — In-memory conversation/session management.
 - `helpers.py` — Shared API helpers.
+
+### `src/clients/` — Process-wide clients for external systems
+
+These modules wrap external systems and keep their construction details in one place.
+
+- `embeddings.py` — Embedding model client.
+- `llm.py` — Chat-model client.
+- `ocr.py` — GLM-OCR client used during PDF ingestion.
+- `qdrant.py` — Qdrant vector-store client.
+- `redis.py` — Redis-backed cache client.
+- `reranker.py` — Remote cross-encoder reranker client.
+- `student_records.py` — Student-record repository.
 
 ### `src/config/` — Configuration and logging
 
@@ -126,7 +139,6 @@ This package contains the shared state, graph node implementations, tools, cache
   - `collection.py` — Collection setup and management.
   - `search.py` — Vector search behavior.
   - `bm25.py` — Sparse/BM25 retrieval.
-  - `reranker.py` — Cross-encoder reranking.
   - `tools.py` — Vector-store helper functions.
 
 ### `src/telegram_bot/` — Telegram integration

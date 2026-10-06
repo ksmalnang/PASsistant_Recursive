@@ -8,10 +8,10 @@ from qdrant_client import QdrantClient
 from src.clients.embeddings import get_embeddings
 from src.clients.qdrant import get_qdrant_client
 from src.clients.redis import RedisCache, get_cache
+from src.clients.reranker import RemoteReranker
 from src.config import get_settings
 from src.utils.vector_store.bm25 import TOKEN_PATTERN, BM25VectorOperations
 from src.utils.vector_store.collection import CollectionOperations
-from src.utils.vector_store.reranker import RemoteReranker
 from src.utils.vector_store.search import SearchOperations
 
 
