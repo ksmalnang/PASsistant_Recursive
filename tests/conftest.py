@@ -106,9 +106,12 @@ async def api_client(
 
 @pytest.fixture
 def chat_backend(monkeypatch: pytest.MonkeyPatch) -> ChatBackend:
-    """Replace agent creation with doubles while keeping the real session manager."""
+    """Bind the chat service to the test agent backend."""
+    from src.api.services import chat_service
+
     backend = ChatBackend()
-    monkeypatch.setattr("src.api.services.get_or_create_agent", backend.manager.get_or_create)
+    monkeypatch.setattr(chat_service, "_session_manager", backend.manager)
+    chat_service._active_runs.clear()
     return backend
 
 
@@ -154,11 +157,10 @@ def live_server_url(app: FastAPI) -> Iterator[str]:
 
 @pytest.fixture
 def documents_backend(monkeypatch: pytest.MonkeyPatch):
-    """Replace the OCR/indexing processor while keeping the real upload service."""
-    from src.api.services import DocumentRouteService
+    """Replace the OCR/indexing processor used by the upload service."""
+    from src.api import services
     from tests.doubles import FakeDocumentProcessor
 
     processor = FakeDocumentProcessor()
-    service = DocumentRouteService(processor_factory=lambda: processor)
-    monkeypatch.setattr("src.api.services.document_service", service)
+    monkeypatch.setattr(services, "create_document_processor", lambda: processor)
     return processor

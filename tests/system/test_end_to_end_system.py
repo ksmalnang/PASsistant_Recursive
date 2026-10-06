@@ -76,7 +76,7 @@ async def test_system_001_end_to_end_academic_question(
 
     response = await system_api_client.post(
         "/chat",
-        json=make_chat_payload(
+        data=make_chat_payload(
             "Berapa jumlah SKS minimum untuk kelulusan Program Studi Informatika?"
         ),
     )
@@ -119,7 +119,7 @@ async def test_system_002_end_to_end_knowledge_base_upload(
 
     query = await system_api_client.post(
         "/chat",
-        json=make_chat_payload(
+        data=make_chat_payload(
             "Kode apa yang wajib dicantumkan pendaftar beasiswa pada formulir pendaftaran?"
         ),
     )
@@ -142,7 +142,7 @@ async def test_system_003_empty_knowledge_base_uses_honest_fallback(
     try:
         response = await system_api_client.post(
             "/chat",
-            json=make_chat_payload(
+            data=make_chat_payload(
                 "Berapa jumlah SKS minimum untuk kelulusan Program Studi Informatika?",
                 thread_id=f"system-empty-{uuid4().hex[:8]}",
             ),
@@ -177,21 +177,21 @@ async def test_system_004_student_record_lookup_is_scoped(
 
     other_seed = await system_api_client.post(
         "/chat",
-        json=make_chat_payload(make_record_seed_message(other), thread_id=thread_id),
+        data=make_chat_payload(make_record_seed_message(other), thread_id=thread_id),
     )
     assert other_seed.status_code == 200
     assert other_seed.json()["intent"] == "manage_record"
 
     seeded_turn = await system_api_client.post(
         "/chat",
-        json=make_chat_payload(make_record_seed_message(seeded), thread_id=thread_id),
+        data=make_chat_payload(make_record_seed_message(seeded), thread_id=thread_id),
     )
     assert seeded_turn.status_code == 200
     assert seeded_turn.json()["intent"] == "manage_record"
 
     lookup = await system_api_client.post(
         "/chat",
-        json=make_chat_payload(
+        data=make_chat_payload(
             make_record_query_by_id_message(seeded_id),
             thread_id=thread_id,
         ),
@@ -214,7 +214,7 @@ async def test_system_005_unknown_student_record_falls_back(
 
     response = await system_api_client.post(
         "/chat",
-        json=make_chat_payload(
+        data=make_chat_payload(
             make_record_query_by_id_message(unknown_id),
             thread_id=f"system-unknown-{uuid4().hex[:8]}",
         ),
@@ -235,7 +235,7 @@ async def test_system_006_prompt_injection_is_blocked_end_to_end(
     """Injection text is rejected before any workflow execution and leaks nothing."""
     response = await system_api_client.post(
         "/chat",
-        json=make_chat_payload(prompt_injection_message),
+        data=make_chat_payload(prompt_injection_message),
     )
 
     assert response.status_code == 400
@@ -258,7 +258,7 @@ async def test_system_007_output_guard_masks_pii_in_generated_answer(
     monkeypatch.setattr("src.clients.llm._llm_instance", None)
     monkeypatch.setattr("src.clients.llm.ChatOpenAI", lambda **kwargs: scripted_llm)
 
-    response = await system_api_client.post("/chat", json=make_chat_payload("halo"))
+    response = await system_api_client.post("/chat", data=make_chat_payload("halo"))
 
     assert response.status_code == 200
     body = response.json()
@@ -280,7 +280,7 @@ async def test_system_008_streaming_resume_after_disconnect(
         thread_id=thread_id,
     )
 
-    started = await system_api_client.post("/chat/stream", json=payload)
+    started = await system_api_client.post("/chat/stream", data=payload)
 
     assert started.status_code == 200
     frames = parse_sse_frames(started.text)
@@ -293,7 +293,7 @@ async def test_system_008_streaming_resume_after_disconnect(
     cursor = frames[cursor_index]
     resumed = await system_api_client.post(
         "/chat/stream",
-        json=payload,
+        data=payload,
         headers={"Last-Event-ID": cursor["id"]},
     )
 
@@ -372,11 +372,11 @@ async def test_system_009_multi_user_concurrency_keeps_state_consistent(
     chats = await asyncio.gather(
         system_api_client.post(
             "/chat",
-            json=make_chat_payload("Sebutkan kode beasiswa unggulan.", thread_id=thread_id),
+            data=make_chat_payload("Sebutkan kode beasiswa unggulan.", thread_id=thread_id),
         ),
         system_api_client.post(
             "/chat",
-            json=make_chat_payload(
+            data=make_chat_payload(
                 "Kapan batas pendaftaran beasiswa unggulan?", thread_id=thread_id
             ),
         ),

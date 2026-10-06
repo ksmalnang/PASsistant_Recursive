@@ -51,7 +51,7 @@ async def test_api_09_chat_stream_emits_ordered_sse_events(
     """Streaming emits ordered run/delta events, then a single terminal event."""
     response = await api_client.post(
         "/chat/stream",
-        json=make_chat_payload(valid_academic_message),
+        data=make_chat_payload(valid_academic_message),
     )
 
     assert response.status_code == 200
@@ -83,7 +83,7 @@ async def test_api_09_chat_stream_emits_ordered_sse_events(
     )
     failed_response = await api_client.post(
         "/chat/stream",
-        json=make_chat_payload(valid_academic_message),
+        data=make_chat_payload(valid_academic_message),
     )
 
     assert failed_response.status_code == 200
@@ -91,4 +91,4 @@ async def test_api_09_chat_stream_emits_ordered_sse_events(
     failed_events = [frame["event"] for frame in failed_frames]
     assert failed_events[-1] == "run.failed"
     assert "run.completed" not in failed_events
-    assert failed_frames[-1]["data"]["message"] == "upstream streaming failure"
+    assert failed_frames[-1]["data"]["message"] == "The chat run failed unexpectedly."

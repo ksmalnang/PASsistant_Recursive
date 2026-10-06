@@ -1,29 +1,57 @@
 """Telegram webhook endpoint."""
 
-from __future__ import annotations
-
 import logging
 from functools import lru_cache
+from hmac import compare_digest
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, status
 from telegram import Bot, Update
 
-from src.api.models import ErrorResponse, TelegramWebhookHealthResponse
+from src.api.models import ErrorResponse
 from src.api.services import chat_service
-from src.config.settings import Settings, get_settings
+from src.config.settings import get_settings
 from src.telegram_bot.adapter import TelegramBotAdapter
 
-router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _require_telegram_enabled() -> None:
+    if not get_settings().TELEGRAM_ENABLED:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Telegram is disabled.")
+
+
+def _verify_webhook_secret(
+    x_telegram_bot_api_secret_token: Annotated[str | None, Header()] = None,
+) -> None:
+    """Check the secret header. Refuses all requests if no secret is set."""
+    expected = get_settings().TELEGRAM_WEBHOOK_SECRET_TOKEN
+    if not expected:
+        logger.error("TELEGRAM_WEBHOOK_SECRET_TOKEN is not set; rejecting request.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Telegram webhook secret is not configured.",
+        )
+    if not compare_digest(
+        (x_telegram_bot_api_secret_token or "").encode(), expected.encode()
+    ):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Invalid Telegram webhook secret."
+        )
+
+
+router = APIRouter()
 
 
 @lru_cache
 def get_telegram_bot() -> Bot:
     """Build a reusable Telegram bot client."""
-    settings = get_settings()
-    if not settings.TELEGRAM_BOT_TOKEN:
-        raise RuntimeError("TELEGRAM_BOT_TOKEN must be set when Telegram support is enabled.")
-    return Bot(token=settings.TELEGRAM_BOT_TOKEN)
+    token = get_settings().TELEGRAM_BOT_TOKEN
+    if not token:
+        raise RuntimeError(
+            "TELEGRAM_BOT_TOKEN must be set when Telegram support is enabled."
+        )
+    return Bot(token=token)
 
 
 @lru_cache
@@ -36,144 +64,43 @@ def get_telegram_adapter() -> TelegramBotAdapter:
     )
 
 
-def _verify_telegram_request(
-    settings: Settings,
-    secret_token: str | None,
-) -> None:
-    if not settings.TELEGRAM_ENABLED:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Telegram is disabled.")
-
-    expected_secret = settings.TELEGRAM_WEBHOOK_SECRET_TOKEN
-    if not expected_secret:
-        return
-
-    if secret_token != expected_secret:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid Telegram webhook secret.",
+async def _process_update(update: Update) -> None:
+    """Run the chat turn after Telegram already got its 200."""
+    try:
+        await get_telegram_adapter().handle_update(update)
+    except Exception:
+        logger.error(
+            "Failed to handle Telegram update %s", update.update_id, exc_info=True
         )
 
 
 @router.post(
     "/telegram/webhook",
-    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(_require_telegram_enabled),
+        Depends(_verify_webhook_secret),
+    ],
     responses={
-        status.HTTP_400_BAD_REQUEST: {
-            "model": ErrorResponse,
-            "description": "The Telegram update payload is invalid.",
-        },
-        status.HTTP_403_FORBIDDEN: {
-            "model": ErrorResponse,
-            "description": "The Telegram webhook secret is invalid or missing.",
-        },
-        status.HTTP_404_NOT_FOUND: {
-            "model": ErrorResponse,
-            "description": "Telegram support is disabled.",
-        },
+        400: {"model": ErrorResponse, "description": "Invalid Telegram update."},
+        403: {"model": ErrorResponse, "description": "Invalid webhook secret."},
+        404: {"model": ErrorResponse, "description": "Telegram support is disabled."},
+        503: {"model": ErrorResponse, "description": "Webhook secret not configured."},
     },
 )
 async def telegram_webhook(
-    request: Request,
-    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+    payload: dict[str, Any], background_tasks: BackgroundTasks
 ) -> dict[str, bool]:
-    """Handle Telegram webhook updates."""
-    settings = get_settings()
-    _verify_telegram_request(settings, x_telegram_bot_api_secret_token)
-
+    """Acknowledge a Telegram update immediately and process it in the background."""
+    bot = get_telegram_bot()
     try:
-        raw_body = await request.body()
-    except Exception as exc:
-        logger.error("Failed to read Telegram webhook body: %s", exc, exc_info=True)
+        update = Update.de_json(payload, bot)
+    except Exception:
+        logger.error("Failed to deserialize Telegram update", exc_info=True)
+        update = None
+    if update is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to read request body.",
-        ) from exc
-
-    if not raw_body:
-        logger.warning(
-            "Received empty request body from %s. Headers: %s",
-            request.client,
-            request.headers,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Empty request body.",
+            status.HTTP_400_BAD_REQUEST, "Malformed Telegram update payload."
         )
 
-    try:
-        payload = await request.json()
-    except Exception as exc:
-        logger.error(
-            "Failed to parse Telegram update JSON: %s | raw body: %s",
-            exc,
-            raw_body[:500],
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Malformed Telegram update payload.",
-        ) from exc
-
-    try:
-        update = Update.de_json(payload, get_telegram_bot())
-    except Exception as exc:
-        logger.error(
-            "Failed to deserialize Telegram update: %s | payload keys: %s",
-            exc,
-            list(payload.keys()) if isinstance(payload, dict) else type(payload),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to deserialize Telegram update: {exc}",
-        ) from exc
-
-    await get_telegram_adapter().handle_update(update)
+    background_tasks.add_task(_process_update, update)
     return {"ok": True}
-
-
-@router.get(
-    "/telegram/webhook",
-    response_model=TelegramWebhookHealthResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Telegram Webhook Status",
-    description="Get the current health and status of the Telegram webhook.",
-    responses={
-        status.HTTP_404_NOT_FOUND: {
-            "model": ErrorResponse,
-            "description": "Telegram support is disabled.",
-        },
-        status.HTTP_500_INTERNAL_SERVER_ERROR: {
-            "model": ErrorResponse,
-            "description": "Failed to get webhook info.",
-        },
-    },
-)
-async def get_telegram_webhook_health() -> TelegramWebhookHealthResponse:
-    """Get the current health and status of the Telegram webhook."""
-    settings = get_settings()
-    if not settings.TELEGRAM_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Telegram is disabled.",
-        )
-
-    try:
-        bot = get_telegram_bot()
-        info = await bot.get_webhook_info()
-        return TelegramWebhookHealthResponse(
-            url=info.url,
-            has_custom_certificate=info.has_custom_certificate,
-            pending_update_count=info.pending_update_count,
-            ip_address=info.ip_address,
-            last_error_date=info.last_error_date,
-            last_error_message=info.last_error_message,
-            max_connections=info.max_connections,
-            allowed_updates=info.allowed_updates,
-        )
-    except Exception as exc:
-        logger.error("Failed to get Telegram webhook info: %s", exc, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get Telegram webhook info: {exc}",
-        ) from exc

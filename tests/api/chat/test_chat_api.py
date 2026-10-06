@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from tests.doubles import ChatBackend, FakeLLM, LlmBackedChatAgent
-from tests.factories import make_agent_state, make_chat_payload, make_citation
+from tests.factories import make_agent_state, make_chat_payload, make_citation, make_upload
 
 EXPECTED_ANSWER = "The graduation requirement is 144 credits."
 
@@ -32,7 +32,7 @@ async def test_api_01_chat_returns_structured_response(
     valid_academic_message: str,
 ) -> None:
     """A valid academic question returns the answer, thread id, and citations."""
-    response = await api_client.post("/chat", json=make_chat_payload(valid_academic_message))
+    response = await api_client.post("/chat", data=make_chat_payload(valid_academic_message))
 
     assert response.status_code == 200
     body = response.json()
@@ -50,48 +50,67 @@ async def test_api_02_chat_rejects_prompt_injection_before_the_service(
     prompt_injection_message: str,
 ) -> None:
     """Injection attempts return 400 and never reach the chat service."""
-    response = await api_client.post("/chat", json=make_chat_payload(prompt_injection_message))
+    response = await api_client.post("/chat", data=make_chat_payload(prompt_injection_message))
 
     assert response.status_code == 400
     assert "prompt_injection" in response.json()["detail"]
     assert chat_backend.agents == []
 
 
-async def test_api_03_chat_request_validation_returns_422(
+async def test_api_03_chat_rejects_empty_and_oversized_messages(
     api_client: httpx.AsyncClient,
     chat_backend: ChatBackend,
 ) -> None:
-    """Empty and oversized messages fail request validation without invoking a workflow."""
-    empty = await api_client.post("/chat", json=make_chat_payload(""))
-    oversized = await api_client.post("/chat", json=make_chat_payload("x" * 4001))
+    """Empty forms fail validation; oversized messages fail the input guard."""
+    empty = await api_client.post("/chat", data=make_chat_payload(""))
+    oversized = await api_client.post("/chat", data=make_chat_payload("x" * 4001))
 
     assert empty.status_code == 422
-    assert oversized.status_code == 422
+    assert oversized.status_code == 400
     assert chat_backend.agents == []
 
 
-async def test_api_04_chat_accepts_session_id_alias(
+async def test_api_04_chat_accepts_thread_id(
     api_client: httpx.AsyncClient,
     scripted_backend: ChatBackend,
     valid_academic_message: str,
 ) -> None:
-    """The legacy ``session_id`` field keeps session continuity across turns."""
-    session_id = "session-alias-4711"
+    """The ``thread_id`` field keeps session continuity across turns."""
+    thread_id = "thread-continuity-4711"
 
     first = await api_client.post(
         "/chat",
-        json=make_chat_payload(valid_academic_message, session_id=session_id),
+        data=make_chat_payload(valid_academic_message, thread_id=thread_id),
     )
     second = await api_client.post(
         "/chat",
-        json=make_chat_payload(valid_academic_message, session_id=session_id),
+        data=make_chat_payload(valid_academic_message, thread_id=thread_id),
     )
 
     assert first.status_code == 200
     assert second.status_code == 200
-    assert first.json()["thread_id"] == session_id
-    assert second.json()["thread_id"] == session_id
+    assert first.json()["thread_id"] == thread_id
+    assert second.json()["thread_id"] == thread_id
     assert len(scripted_backend.agents) == 1
+
+
+async def test_api_05_chat_accepts_multipart_file(
+    api_client: httpx.AsyncClient,
+    scripted_backend: ChatBackend,
+    valid_academic_message: str,
+    sample_pdf_bytes: bytes,
+) -> None:
+    response = await api_client.post(
+        "/chat",
+        data={"message": valid_academic_message},
+        files=[make_upload("student-record.pdf", sample_pdf_bytes, "application/pdf")],
+    )
+
+    assert response.status_code == 200
+    assert response.json()["documents_processed"] == 1
+    assert scripted_backend.last_agent.chat_calls == [
+        (valid_academic_message, [("student-record.pdf", sample_pdf_bytes)])
+    ]
 
 
 async def test_api_10_chat_masks_pii_and_system_prompt_leaks(
@@ -107,7 +126,7 @@ async def test_api_10_chat_masks_pii_and_system_prompt_leaks(
     chat_backend.agent_factory = lambda thread_id: LlmBackedChatAgent(
         FakeLLM(pii_draft), session_id=thread_id or "llm-thread-pii"
     )
-    pii_response = await api_client.post("/chat", json=make_chat_payload(valid_academic_message))
+    pii_response = await api_client.post("/chat", data=make_chat_payload(valid_academic_message))
 
     assert pii_response.status_code == 200
     assert email not in pii_response.text
@@ -121,7 +140,7 @@ async def test_api_10_chat_masks_pii_and_system_prompt_leaks(
     chat_backend.agent_factory = lambda thread_id: LlmBackedChatAgent(
         FakeLLM(leak_draft), session_id=thread_id or "llm-thread-leak"
     )
-    leak_response = await api_client.post("/chat", json=make_chat_payload(valid_academic_message))
+    leak_response = await api_client.post("/chat", data=make_chat_payload(valid_academic_message))
 
     assert leak_response.status_code == 200
     leak_body = leak_response.json()

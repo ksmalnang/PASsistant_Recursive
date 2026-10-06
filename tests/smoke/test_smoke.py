@@ -66,7 +66,7 @@ async def test_smoke_003_basic_chat_turn(
     async with httpx.AsyncClient(base_url=live_server_url) as client:
         response = await client.post(
             "/chat",
-            json=make_chat_payload(valid_academic_message, thread_id="smoke-thread"),
+            data=make_chat_payload(valid_academic_message, thread_id="smoke-thread"),
         )
 
     assert response.status_code == 200
@@ -84,7 +84,7 @@ async def test_smoke_004_input_guard_blocks_injection(
     async with httpx.AsyncClient(base_url=live_server_url) as client:
         response = await client.post(
             "/chat",
-            json=make_chat_payload(prompt_injection_message),
+            data=make_chat_payload(prompt_injection_message),
         )
 
     assert response.status_code == 400
@@ -128,7 +128,7 @@ async def test_smoke_006_rate_limit_rejects_and_recovers(
 
     async with httpx.AsyncClient(base_url=live_server_url) as client:
         statuses = [
-            (await client.post("/chat", json=payload)).status_code for _ in range(limit + 1)
+            (await client.post("/chat", data=payload)).status_code for _ in range(limit + 1)
         ]
 
         assert statuses.count(200) == limit
@@ -137,6 +137,6 @@ async def test_smoke_006_rate_limit_rejects_and_recovers(
 
         fake_clock.advance(RATE_LIMIT_WINDOW_SECONDS + 1)
 
-        recovered = await client.post("/chat", json=payload)
+        recovered = await client.post("/chat", data=payload)
 
     assert recovered.status_code == 200

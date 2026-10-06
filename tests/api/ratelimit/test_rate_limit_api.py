@@ -31,21 +31,21 @@ async def test_api_12_rate_limit_rejects_excess_and_recovers_after_window(
 
     async with make_api_client() as client:
         for _ in range(limit):
-            allowed = await client.post("/chat", json=payload)
+            allowed = await client.post("/chat", data=payload)
             assert allowed.status_code == 200
 
-        blocked = await client.post("/chat", json=payload)
+        blocked = await client.post("/chat", data=payload)
 
         assert blocked.status_code == 429
         assert "Rate limit exceeded" in blocked.json()["detail"]
         assert len(chat_backend.agents) == 1
 
         async with make_api_client(host="198.51.100.23") as other_client:
-            assert (await other_client.post("/chat", json=payload)).status_code == 200
-            assert (await other_client.post("/chat", json=payload)).status_code == 200
+            assert (await other_client.post("/chat", data=payload)).status_code == 200
+            assert (await other_client.post("/chat", data=payload)).status_code == 200
 
         fake_clock.advance(RATE_LIMIT_WINDOW_SECONDS + 1)
 
-        recovered = await client.post("/chat", json=payload)
+        recovered = await client.post("/chat", data=payload)
 
         assert recovered.status_code == 200
