@@ -9,6 +9,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from langchain_core.messages import AIMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 
@@ -132,7 +133,7 @@ def build_fallback_response(state: AgentState) -> dict:
         "or contact the academic office for confirmation."
     )
     return {
-        "messages": [{"role": "assistant", "content": content}],
+        "messages": [AIMessage(content=content)],
         "draft_response": content,
     }
 
