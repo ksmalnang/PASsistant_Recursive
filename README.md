@@ -97,7 +97,7 @@ flowchart LR
 - Python 3.11+
 - [UV](https://docs.astral.sh/uv/getting-started/installation/) package manager
 - Docker (for Qdrant & Redis)
-- API keys: OpenAI-compatible provider (e.g. OpenRouter), Zhipu AI (GLM-OCR), Jina AI (for reranking, optional) — see [docs/api-keys.md](docs/api-keys.md) for how to obtain them.
+- API keys: OpenAI-compatible provider (e.g. OpenRouter), Zhipu AI (GLM-OCR), Jina AI (for reranking fallback, optional) - see [docs/api-keys.md](docs/api-keys.md) for how to obtain them.
 
 ### Setup
 
@@ -228,7 +228,10 @@ See [`.env.example`](.env.example) for all available variables. Key ones:
 | `QDRANT_URL` | Qdrant vector database URL |
 | `RETRIEVAL_STRATEGY` | `similarity`, `rrf`, or `reranker` |
 | `RETRIEVAL_TOP_K` | Number of chunks retrieved per query |
-| `RERANKER_MODEL` | Cross-encoder model (when strategy=reranker) |
+| `RERANKER_PROVIDER` | Primary reranker provider (default: openrouter) |
+| `RERANKER_MODEL` | Cross-encoder model (e.g. cohere/rerank-v3.5) |
+| `RERANKER_FALLBACK_PROVIDER` | Fallback reranker provider (default: jina) |
+| `JINA_API_KEY` | Jina AI key for fallback reranking |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token |
 | `TELEGRAM_WEBHOOK_URL` | Target URL for Telegram webhook |
 | `TELEGRAM_WEBHOOK_SECRET_TOKEN` | Secret token to authenticate webhook requests |
@@ -320,7 +323,7 @@ src/
 | OCR | GLM-4 Vision (Zhipu AI) |
 | Vector DB | Qdrant (dense + sparse vectors) |
 | Embeddings | Configurable (Qwen, OpenAI, etc.) |
-| Reranker | Jina Reranker v2 / FastEmbed cross-encoder |
+| Reranker | OpenRouter (Cohere / Qwen) / Jina AI fallback / FastEmbed |
 | API | FastAPI + Uvicorn |
 | Caching | Redis |
 | Guardrails | Input/Output Guards |
