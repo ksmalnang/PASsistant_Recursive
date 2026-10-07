@@ -1,8 +1,12 @@
-"""Remote cross-encoder reranker client."""
+"""Cross-encoder reranker client."""
 
 from typing import Any
 
 import httpx
+
+from src.config import get_settings
+
+_reranker: Any | None = None
 
 
 class RemoteReranker:
@@ -91,3 +95,34 @@ class RemoteReranker:
         if trimmed.endswith("/rerank"):
             return trimmed
         return f"{trimmed}/rerank"
+
+
+def get_reranker() -> Any:
+    """Return the process-wide reranker: remote when configured, else local FastEmbed."""
+    global _reranker
+    if _reranker is None:
+        settings = get_settings()
+        if not settings.RERANKER_MODEL:
+            raise ValueError("RERANKER_MODEL is required when RETRIEVAL_STRATEGY=reranker")
+        if settings.RERANKER_BASE_URL:
+            if not settings.RERANKER_API_KEY:
+                raise ValueError("RERANKER_API_KEY is required when RERANKER_BASE_URL is set")
+            _reranker = RemoteReranker(
+                base_url=settings.RERANKER_BASE_URL,
+                api_key=settings.RERANKER_API_KEY,
+                model=settings.RERANKER_MODEL,
+            )
+        else:
+            _reranker = _build_local_reranker(settings.RERANKER_MODEL)
+    return _reranker
+
+
+def _build_local_reranker(model_name: str) -> Any:
+    """Build a local FastEmbed cross-encoder when no remote endpoint is configured."""
+    try:
+        from fastembed.rerank.cross_encoder import TextCrossEncoder
+    except ImportError as exc:
+        raise RuntimeError(
+            "FastEmbed reranker support is not installed. Install qdrant-client[fastembed]."
+        ) from exc
+    return TextCrossEncoder(model_name=model_name)

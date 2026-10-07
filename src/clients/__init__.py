@@ -7,7 +7,7 @@ from src.clients.llm import get_llm
 from src.clients.ocr import close_zai_client, get_zai_client
 from src.clients.qdrant import close_qdrant_client, get_qdrant_client
 from src.clients.redis import RedisCache, close_cache, get_cache
-from src.clients.reranker import RemoteReranker
+from src.clients.reranker import RemoteReranker, get_reranker
 from src.clients.student_records import (
     InMemoryStudentRecordRepository,
     get_student_repository,
@@ -27,6 +27,7 @@ __all__ = [
     "get_embeddings",
     "get_llm",
     "get_qdrant_client",
+    "get_reranker",
     "get_student_repository",
     "get_zai_client",
 ]

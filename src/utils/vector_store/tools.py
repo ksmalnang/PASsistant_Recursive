@@ -8,7 +8,7 @@ from qdrant_client import QdrantClient
 from src.clients.embeddings import get_embeddings
 from src.clients.qdrant import get_qdrant_client
 from src.clients.redis import RedisCache, get_cache
-from src.clients.reranker import RemoteReranker
+from src.clients.reranker import get_reranker
 from src.config import get_settings
 from src.utils.vector_store.bm25 import TOKEN_PATTERN, BM25VectorOperations
 from src.utils.vector_store.collection import CollectionOperations
@@ -44,12 +44,10 @@ class VectorStoreTools(
         self.retrieval_strategy = settings.RETRIEVAL_STRATEGY
         self.reranker_model = settings.RERANKER_MODEL
         self.reranker_base_url = settings.RERANKER_BASE_URL
-        self.reranker_api_key = settings.RERANKER_API_KEY
         self.reranker_candidate_multiplier = max(
             settings.RERANKER_CANDIDATE_MULTIPLIER,
             1,
         )
-        self.reranker: Any | None = None
         self.bm25_vector_name = self._BM25_VECTOR_NAME
         self.bm25_vectors_enabled: bool | None = None
         self._rrf_warning_emitted = False
@@ -59,25 +57,5 @@ class VectorStoreTools(
         return get_embeddings()
 
     def _get_reranker(self) -> Any:
-        """Create the reranker lazily so startup stays cheap when it is disabled."""
-        if self.reranker is None:
-            if not self.reranker_model:
-                raise ValueError("RERANKER_MODEL is required when RETRIEVAL_STRATEGY=reranker")
-            if self.reranker_base_url:
-                if not self.reranker_api_key:
-                    raise ValueError("RERANKER_API_KEY is required when RERANKER_BASE_URL is set")
-                self.reranker = RemoteReranker(
-                    base_url=self.reranker_base_url,
-                    api_key=self.reranker_api_key,
-                    model=self.reranker_model,
-                )
-                return self.reranker
-
-            try:
-                from fastembed.rerank.cross_encoder import TextCrossEncoder
-            except ImportError as exc:
-                raise RuntimeError(
-                    "FastEmbed reranker support is not installed. Install qdrant-client[fastembed]."
-                ) from exc
-            self.reranker = TextCrossEncoder(model_name=self.reranker_model)
-        return self.reranker
+        """Return the shared reranker client, created lazily on first use."""
+        return get_reranker()

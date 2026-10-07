@@ -11,7 +11,9 @@ from src.clients import (
     get_cache,
     get_llm,
     get_qdrant_client,
+    get_reranker,
 )
+from src.clients.reranker import RemoteReranker
 from src.utils.vector_store import VectorStoreTools
 
 
@@ -60,3 +62,42 @@ def test_unit_04_vector_store_uses_shared_client() -> None:
     tools = VectorStoreTools()
 
     assert tools.client is get_qdrant_client()
+
+
+def test_unit_05_reranker_provider_returns_process_wide_remote_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The reranker provider resolves one shared remote client across calls."""
+    monkeypatch.setattr(
+        "src.clients.reranker.get_settings",
+        lambda: SimpleNamespace(
+            RERANKER_MODEL="test-reranker",
+            RERANKER_BASE_URL="https://reranker.invalid/api/v1",
+            RERANKER_API_KEY="test-key",
+        ),
+    )
+    monkeypatch.setattr("src.clients.reranker._reranker", None)
+
+    reranker = get_reranker()
+
+    assert isinstance(reranker, RemoteReranker)
+    assert get_reranker() is reranker
+    assert VectorStoreTools()._get_reranker() is reranker
+
+
+def test_unit_06_reranker_provider_requires_a_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A missing reranker model is reported instead of building a broken client."""
+    monkeypatch.setattr(
+        "src.clients.reranker.get_settings",
+        lambda: SimpleNamespace(
+            RERANKER_MODEL=None,
+            RERANKER_BASE_URL=None,
+            RERANKER_API_KEY=None,
+        ),
+    )
+    monkeypatch.setattr("src.clients.reranker._reranker", None)
+
+    with pytest.raises(ValueError, match="RERANKER_MODEL"):
+        get_reranker()
