@@ -1,4 +1,4 @@
-"""Unit tests for API request/event models (UT-008, UT-009)."""
+"""Unit tests for API stream event models (UT-009)."""
 
 from datetime import UTC, datetime
 from typing import Any
@@ -6,26 +6,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from src.api.models import ChatRequest, ChatStreamEvent
-
-
-def test_unit_008_chat_request_validates_message_length() -> None:
-    """Valid messages are accepted; empty and oversized messages raise validation errors."""
-    minimum = ChatRequest(message="x")
-    maximum = ChatRequest(message="x" * 4000)
-    assert minimum.message == "x"
-    assert len(maximum.message) == 4000
-
-    valid = ChatRequest(message="Apa syarat kelulusan program sarjana?")
-    assert valid.thread_id is None
-
-    with pytest.raises(ValidationError) as empty_error:
-        ChatRequest(message="")
-    assert empty_error.value.errors()[0]["loc"] == ("message",)
-
-    with pytest.raises(ValidationError) as oversized_error:
-        ChatRequest(message="x" * 4001)
-    assert oversized_error.value.errors()[0]["loc"] == ("message",)
+from src.api.models import ChatStreamEvent
 
 
 def test_unit_009_chat_stream_event_validates_event_type() -> None:

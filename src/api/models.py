@@ -1,23 +1,23 @@
 """Pydantic models for the API layer."""
 
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, Field
+from fastapi import UploadFile
+from pydantic import BaseModel, Field
 
 from src.utils.state import Citation
 
 
-class ChatRequest(BaseModel):
-    """Chat request payload."""
+@dataclass
+class ChatInput:
+    """Validated chat turn parsed from the multipart form."""
 
-    message: str = Field(description="User message text", min_length=1, max_length=4000)
-    thread_id: str | None = Field(
-        default=None,
-        description="Thread identifier for continuity",
-        validation_alias=AliasChoices("thread_id", "session_id"),
-    )
+    message: str
+    thread_id: str | None
+    files: list[UploadFile]
 
 
 class ChatResponse(BaseModel):
@@ -70,11 +70,22 @@ class ErrorResponse(BaseModel):
 class DependencyHealthResponse(BaseModel):
     """Health status for an external dependency."""
 
-    status: str = Field(description="Dependency state such as healthy, unhealthy, or disabled")
+    status: str = Field(
+        description="Dependency state such as healthy, unhealthy, or disabled"
+    )
     detail: str | None = Field(
         default=None,
         description="Additional dependency status detail",
     )
+
+
+class DocumentListItem(BaseModel):
+    """Summary of an ingested document in the knowledge base."""
+
+    document_id: str
+    filename: str
+    chunks: int
+    doc_title: str | None = None
 
 
 class DocumentDeleteResponse(BaseModel):
@@ -83,7 +94,6 @@ class DocumentDeleteResponse(BaseModel):
     success: bool = Field(default=True, description="Whether deletion completed")
     document_id: str = Field(description="Deleted document identifier")
     filename: str = Field(description="Deleted document filename")
-    deleted: bool = Field(default=True, description="Whether deletion completed")
 
 
 class DocumentIngestionResponse(BaseModel):
@@ -125,16 +135,3 @@ class HealthResponse(BaseModel):
     environment: str = Field(description="Current environment")
     redis: DependencyHealthResponse = Field(description="Redis connectivity status")
     qdrant: DependencyHealthResponse = Field(description="Qdrant connectivity status")
-
-
-class TelegramWebhookHealthResponse(BaseModel):
-    """Health status and info for a Telegram webhook."""
-
-    url: str = Field(description="Current webhook URL")
-    has_custom_certificate: bool = Field(description="True, if a custom certificate was provided")
-    pending_update_count: int = Field(description="Number of updates awaiting delivery")
-    ip_address: str | None = Field(default=None, description="Currently used webhook IP address")
-    last_error_date: datetime | int | None = Field(default=None, description="Time for the most recent error")
-    last_error_message: str | None = Field(default=None, description="Error message in human-readable format")
-    max_connections: int | None = Field(default=None, description="Maximum allowed number of simultaneous HTTPS connections")
-    allowed_updates: list[str] | None = Field(default=None, description="A list of update types the bot is subscribed to")

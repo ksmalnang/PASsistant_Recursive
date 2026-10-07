@@ -1,217 +1,111 @@
-"""Chat endpoints."""
+"""Chat endpoints.
 
-import logging
+One chat endpoint (plus its streaming twin). Files are optional: send
+`multipart/form-data` with `message`, optional `thread_id`, optional `files`.
+"""
+
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import StreamingResponse
 
-from src.api.models import ChatRequest, ChatResponse, ErrorResponse
-from src.api.services import (
-    chat_service,
-    handle_chat_message,
-    handle_chat_message_stream,
-    handle_chat_upload,
-    handle_chat_upload_stream,
-)
+from src.api.models import ChatInput, ChatResponse, ErrorResponse
+from src.api.services import chat_service
 from src.guardrails.input_guard import InputGuard
 
-logger = logging.getLogger(__name__)
-router = APIRouter()
 _guard = InputGuard()
-UPLOAD_FILE_PARAM = File(...)
-CHAT_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
-    status.HTTP_400_BAD_REQUEST: {
-        "model": ErrorResponse,
-        "description": "The request payload is invalid.",
-    },
-    status.HTTP_429_TOO_MANY_REQUESTS: {
-        "model": ErrorResponse,
-        "description": "The client exceeded the request rate limit.",
-    },
-    status.HTTP_500_INTERNAL_SERVER_ERROR: {
-        "model": ErrorResponse,
-        "description": "The server failed to process the chat request.",
-    },
+
+ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    400: {"model": ErrorResponse, "description": "The request payload is invalid."},
+    429: {"model": ErrorResponse, "description": "Rate limit exceeded."},
 }
 
 
-@router.post(
-    "/chat",
-    response_model=ChatResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Send a chat message",
-    description="Submit a text message to the chatbot and receive a structured reply.",
-    responses=CHAT_ERROR_RESPONSES,
-)
-async def chat(request: ChatRequest, http_request: Request) -> ChatResponse:
-    """Send a chat message to the agent."""
-    try:
-        _enforce_rate_limit(http_request)
-        guard_result = _guard.validate(request.message)
-        if not guard_result.safe:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Message rejected: {guard_result.reason}",
-            )
-        return await handle_chat_message(
-            message=guard_result.sanitized or request.message.strip(),
-            thread_id=request.thread_id,
-        )
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("Chat endpoint error: %s", exc, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process chat request.",
-        ) from exc
-
-
-@router.post(
-    "/chat/upload",
-    response_model=ChatResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Send a chat message with file uploads",
-    description=(
-        "Upload one or more documents together with a prompt so the chatbot can "
-        "process the files in the same conversation request. This endpoint is "
-        "for chat-context file processing and does not ingest documents into the "
-        "shared retrieval index."
-    ),
-    responses=CHAT_ERROR_RESPONSES,
-)
-async def chat_with_upload(
-    http_request: Request,
-    message: str = "Process this document",
-    files: list[UploadFile] = UPLOAD_FILE_PARAM,
-    thread_id: str | None = None,
-    session_id: str | None = None,
-) -> ChatResponse:
-    """Chat with document uploads."""
-    try:
-        _enforce_rate_limit(http_request)
-        guard_result = _guard.validate(message)
-        if not guard_result.safe:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Message rejected: {guard_result.reason}",
-            )
-        if not files:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="At least one file must be uploaded.",
-            )
-        return await handle_chat_upload(
-            message=guard_result.sanitized or message.strip(),
-            files=files,
-            thread_id=thread_id or session_id,
-        )
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("Upload chat endpoint error: %s", exc, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process uploaded chat documents.",
-        ) from exc
-
-
-@router.post(
-    "/chat/stream",
-    status_code=status.HTTP_200_OK,
-    summary="Stream a chat message",
-    description="Submit a text message and receive SSE events for progressive updates.",
-    responses=CHAT_ERROR_RESPONSES,
-)
-async def chat_stream(request: ChatRequest, http_request: Request) -> StreamingResponse:
-    """Stream a chat message via SSE."""
-    try:
-        _enforce_rate_limit(http_request)
-        guard_result = _guard.validate(request.message)
-        if not guard_result.safe:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Message rejected: {guard_result.reason}",
-            )
-
-        async def event_stream() -> AsyncIterator[str]:
-            async for event in handle_chat_message_stream(
-                message=guard_result.sanitized or request.message.strip(),
-                thread_id=request.thread_id,
-                last_event_id=http_request.headers.get("Last-Event-ID")
-                or http_request.query_params.get("last_event_id"),
-            ):
-                yield chat_service.encode_sse_event(event)
-
-        return StreamingResponse(event_stream(), media_type="text/event-stream")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("Chat stream endpoint error: %s", exc, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process chat stream request.",
-        ) from exc
-
-
-@router.post(
-    "/chat/upload/stream",
-    status_code=status.HTTP_200_OK,
-    summary="Stream a chat message with uploads",
-    description="Upload documents and receive SSE events for progressive updates.",
-    responses=CHAT_ERROR_RESPONSES,
-)
-async def chat_with_upload_stream(
-    http_request: Request,
-    message: str = "Process this document",
-    files: list[UploadFile] = UPLOAD_FILE_PARAM,
-    thread_id: str | None = None,
-    session_id: str | None = None,
-) -> StreamingResponse:
-    """Stream a chat turn with uploaded documents via SSE."""
-    try:
-        _enforce_rate_limit(http_request)
-        guard_result = _guard.validate(message)
-        if not guard_result.safe:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Message rejected: {guard_result.reason}",
-            )
-        if not files:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="At least one file must be uploaded.",
-            )
-
-        async def event_stream() -> AsyncIterator[str]:
-            async for event in handle_chat_upload_stream(
-                message=guard_result.sanitized or message.strip(),
-                files=files,
-                thread_id=thread_id or session_id,
-                last_event_id=http_request.headers.get("Last-Event-ID")
-                or http_request.query_params.get("last_event_id"),
-            ):
-                yield chat_service.encode_sse_event(event)
-
-        return StreamingResponse(event_stream(), media_type="text/event-stream")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("Upload chat stream endpoint error: %s", exc, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process uploaded chat stream request.",
-        ) from exc
-
-
 def _enforce_rate_limit(request: Request) -> None:
-    """Reject requests that exceed the in-memory rate limit."""
-    client_host = getattr(request.client, "host", None) or "unknown"
-    limiter = request.app.state.rate_limiter
-    if not limiter.allow(client_host):
+    client = request.client.host if request.client else "unknown"
+    if not request.app.state.rate_limiter.allow(client):
         raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded. Please try again later.",
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Rate limit exceeded. Please try again later.",
         )
+
+
+router = APIRouter(
+    dependencies=[Depends(_enforce_rate_limit)],
+    responses=ERROR_RESPONSES,
+)
+
+
+async def _chat_input(
+    message: Annotated[str, Form()],
+    thread_id: Annotated[str | None, Form()] = None,
+    files: Annotated[list[UploadFile] | None, File()] = None,
+) -> ChatInput:
+    """Parse the form and run the input guard once, for every chat route."""
+    result = _guard.validate(message)
+    if not result.safe:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, f"Message rejected: {result.reason}"
+        )
+    return ChatInput(
+        message=result.sanitized or message.strip(),
+        thread_id=thread_id,
+        # Browsers/Swagger send an empty file part when nothing is selected.
+        files=[f for f in files or [] if f.filename],
+    )
+
+
+ChatInputDep = Annotated[ChatInput, Depends(_chat_input)]
+
+
+def _sse(events: AsyncIterator[Any]) -> StreamingResponse:
+    async def encoded() -> AsyncIterator[str]:
+        async for event in events:
+            yield chat_service.encode_sse_event(event)
+
+    return StreamingResponse(encoded(), media_type="text/event-stream")
+
+
+@router.post("/chat", summary="Send a chat message (files optional)")
+async def chat(data: ChatInputDep) -> ChatResponse:
+    """Chat with the agent. Attached files are used as context for this turn only
+    (they are not added to the shared retrieval index)."""
+    if data.files:
+        return await chat_service.handle_chat_upload(
+            message=data.message, files=data.files, thread_id=data.thread_id
+        )
+    return await chat_service.handle_chat_message(
+        message=data.message, thread_id=data.thread_id
+    )
+
+
+@router.post("/chat/stream", summary="Stream a chat message (files optional)")
+async def chat_stream(data: ChatInputDep, request: Request) -> StreamingResponse:
+    """Same as `/chat`, but replies with SSE events."""
+    last_event_id = request.headers.get("Last-Event-ID") or request.query_params.get(
+        "last_event_id"
+    )
+    if data.files:
+        events = chat_service.stream_chat_upload(
+            message=data.message,
+            files=data.files,
+            thread_id=data.thread_id,
+            last_event_id=last_event_id,
+        )
+    else:
+        events = chat_service.stream_chat_message(
+            message=data.message,
+            thread_id=data.thread_id,
+            last_event_id=last_event_id,
+        )
+    return _sse(events)

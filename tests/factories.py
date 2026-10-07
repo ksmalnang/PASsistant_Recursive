@@ -7,25 +7,18 @@ from typing import Any
 
 from src.utils.state import AgentState, Citation, StudentRecord
 
-JsonDict = dict[str, Any]
+FormData = dict[str, Any]
 
 # Minimal PDF-shaped payload for upload flows whose OCR/indexing is mocked.
 # The real upload pipeline is covered by tests/system with generated text PDFs.
 PDF_STUB_BYTES = b"%PDF-1.4\n% PASsistant upload fixture (OCR/indexing mocked)\n%%EOF\n"
 
 
-def make_chat_payload(
-    message: str,
-    *,
-    thread_id: str | None = None,
-    session_id: str | None = None,
-) -> JsonDict:
-    """Build a ``POST /chat`` JSON payload with an optional thread identifier."""
-    payload: JsonDict = {"message": message}
+def make_chat_payload(message: str, *, thread_id: str | None = None) -> FormData:
+    """Build form data for a chat request with an optional thread identifier."""
+    payload: FormData = {"message": message}
     if thread_id is not None:
         payload["thread_id"] = thread_id
-    if session_id is not None:
-        payload["session_id"] = session_id
     return payload
 
 

@@ -3,12 +3,12 @@ Application configuration management using Pydantic Settings.
 Loads environment variables from .env file with validation.
 """
 
-import re
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -148,7 +148,7 @@ class Settings(BaseSettings):
     APP_ENV: str = Field(default="development")
     DEBUG: bool = Field(default=False)
     LOG_LEVEL: str = Field(default="INFO")
-    LOG_APP_NAME: str = Field(default="student-records-chatbot")
+    LOG_APP_NAME: str = Field(default="PASsistant")
     LOG_SYSLOG_FACILITY: int = Field(
         default=16,
         description="RFC 5424 facility code. Defaults to local0.",
@@ -161,6 +161,7 @@ class Settings(BaseSettings):
     # --- Telegram Bot ---
     TELEGRAM_BOT_TOKEN: Optional[str] = Field(default=None)
     TELEGRAM_WEBHOOK_URL: Optional[str] = Field(default=None)
+    TELEGRAM_WEBHOOK_SECRET_TOKEN: Optional[str] = Field(default=None)
     TELEGRAM_ENABLED: bool = Field(default=False)
     TELEGRAM_MAX_FILE_BYTES: int = Field(default=20_000_000)
     TELEGRAM_ALLOWED_FILE_MIME_TYPES: list[str] | None = Field(default=None)

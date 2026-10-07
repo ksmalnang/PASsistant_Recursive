@@ -1,9 +1,7 @@
 """Telegram update adapter for PASsistant."""
 
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from telegram import Bot, Message, Update
 from telegram.constants import ChatAction
@@ -35,160 +33,99 @@ GENERIC_ERROR_MESSAGE = "Waduh, lagi error nih 😅 Coba kirim ulang sebentar la
 REJECTED_MESSAGE = (
     "Permintaan itu tidak dapat diproses 🙂 Coba pertanyaan lain yang lebih relevan ya."
 )
+DOWNLOAD_ERROR_MESSAGE = "I could not download that file from Telegram."
+EMPTY_RESPONSE_MESSAGE = "I processed your request but have no response to provide."
 
 
 class TelegramBotAdapter:
     """Handle Telegram updates using the shared chat service."""
 
-    def __init__(self, chat_service: ChatRouteService, bot: Bot, settings: Settings):
+    def __init__(self, chat_service: "ChatRouteService", bot: Bot, settings: Settings):
         self._chat_service = chat_service
         self._bot = bot
         self._settings = settings
 
     async def handle_update(self, update: Update) -> None:
-        """Process a Telegram update."""
+        """Process a Telegram update. Failures are reported to the user, not raised."""
         message = update.effective_message
         if message is None or message.chat is None:
-            self._log_event("Ignoring unsupported Telegram update", update, None, None)
+            logger.info(
+                "Ignoring unsupported Telegram update",
+                extra={"channel": "telegram", "update_id": update.update_id},
+            )
             return
 
-        session_id = self._build_session_id(message.chat.id)
-        self._log_event("Received Telegram update", update, session_id, message)
+        chat_id = message.chat.id
+        thread_id = f"telegram:{chat_id}"
+        log_extra = {
+            "channel": "telegram",
+            "telegram_chat_id": chat_id,
+            "telegram_user_id": message.from_user.id if message.from_user else None,
+            "thread_id": thread_id,
+            "update_id": update.update_id,
+        }
+        logger.info("Received Telegram update", extra=log_extra)
 
         try:
-            if message.text and message.text.strip().startswith(("/start", "/help")):
-                await self._send_text(message.chat.id, WELCOME_MESSAGE)
-                return
-
-            if message.text and message.text.strip():
-                guard_result = _guard.validate(message.text.strip())
-                if not guard_result.safe:
-                    await self._send_text(message.chat.id, REJECTED_MESSAGE)
-                    return
-                await self._send_typing(message.chat.id)
-                response = await self._chat_service.handle_chat_message(
-                    message=guard_result.sanitized or message.text.strip(),
-                    session_id=session_id,
-                )
-                await self._send_chat_response(
-                    message.chat.id,
-                    response.response,
-                    response.citations,
-                )
-                self._log_success(
-                    update, session_id, message, response.intent, response.documents_processed
-                )
-                return
-
-            files = await extract_telegram_files(message, self._bot, self._settings)
-            if files:
-                prompt = get_effective_prompt(message)
-                guard_result = _guard.validate(prompt)
-                if not guard_result.safe:
-                    await self._send_text(message.chat.id, REJECTED_MESSAGE)
-                    return
-                await self._send_typing(message.chat.id)
-                response = await self._chat_service.handle_chat_upload(
-                    message=guard_result.sanitized or prompt.strip(),
-                    files=files,
-                    session_id=session_id,
-                )
-                await self._send_chat_response(
-                    message.chat.id,
-                    response.response,
-                    response.citations,
-                )
-                self._log_success(
-                    update, session_id, message, response.intent, response.documents_processed
-                )
-                return
-
-            await self._send_text(message.chat.id, UNSUPPORTED_MESSAGE)
-        except TelegramFileTooLargeError as exc:
-            await self._send_text(message.chat.id, str(exc))
-        except TelegramUnsupportedFileTypeError as exc:
-            await self._send_text(message.chat.id, str(exc))
+            await self._handle_message(message, thread_id, log_extra)
+        except (TelegramFileTooLargeError, TelegramUnsupportedFileTypeError) as exc:
+            await self._send_text(chat_id, str(exc))
         except TelegramFileDownloadError:
-            await self._send_text(message.chat.id, "I could not download that file from Telegram.")
+            await self._send_text(chat_id, DOWNLOAD_ERROR_MESSAGE)
         except TelegramFileError:
-            await self._send_text(message.chat.id, UNSUPPORTED_MESSAGE)
-        except Exception as exc:
-            self._log_event(
-                "Telegram adapter failed",
-                update,
-                session_id,
-                message,
-                level=logging.ERROR,
-                exc_info=exc,
-            )
-            await self._send_text(message.chat.id, GENERIC_ERROR_MESSAGE)
+            await self._send_text(chat_id, UNSUPPORTED_MESSAGE)
+        except Exception:
+            logger.exception("Telegram adapter failed", extra=log_extra)
+            await self._send_text(chat_id, GENERIC_ERROR_MESSAGE)
 
-    def _build_session_id(self, chat_id: int) -> str:
-        return f"telegram:{chat_id}"
-
-    async def _send_chat_response(
-        self,
-        chat_id: int,
-        text: str,
-        citations: list,
+    async def _handle_message(
+        self, message: Message, thread_id: str, log_extra: dict[str, Any]
     ) -> None:
-        del citations
-        formatted = format_telegram_response(text)
-        if not formatted:
-            formatted = "I processed your request but have no response to provide."
+        chat_id = message.chat.id
+        text = (message.text or "").strip()
+
+        if text.startswith(("/start", "/help")):
+            await self._send_text(chat_id, WELCOME_MESSAGE)
+            return
+
+        # Text wins; otherwise look for attached files (caption becomes the prompt).
+        files = [] if text else await extract_telegram_files(message, self._bot, self._settings)
+        if not text and not files:
+            await self._send_text(chat_id, UNSUPPORTED_MESSAGE)
+            return
+
+        prompt = text or get_effective_prompt(message)
+        verdict = _guard.validate(prompt)
+        if not verdict.safe:
+            await self._send_text(chat_id, REJECTED_MESSAGE)
+            return
+        prompt = verdict.sanitized or prompt.strip()
+
+        await self._bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+        if files:
+            response = await self._chat_service.handle_chat_upload(
+                message=prompt, files=files, thread_id=thread_id
+            )
+        else:
+            response = await self._chat_service.handle_chat_message(
+                message=prompt, thread_id=thread_id
+            )
+
+        await self._send_reply(chat_id, response.response)
+        logger.info(
+            "Telegram update handled",
+            extra={
+                **log_extra,
+                "intent": response.intent,
+                "documents_processed": response.documents_processed,
+            },
+        )
+
+    async def _send_reply(self, chat_id: int, text: str) -> None:
+        formatted = format_telegram_response(text) or EMPTY_RESPONSE_MESSAGE
         for chunk in split_telegram_messages(formatted):
             await self._send_text(chat_id, chunk)
 
-    async def _send_typing(self, chat_id: int) -> None:
-        await self._bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-
     async def _send_text(self, chat_id: int, text: str) -> None:
-        if not text.strip():
-            return
-        await self._bot.send_message(chat_id=chat_id, text=text)
-
-    def _log_success(
-        self,
-        update: Update,
-        session_id: str,
-        message: Message,
-        intent: str | None,
-        documents_processed: int,
-    ) -> None:
-        self._log_event(
-            "Telegram update handled",
-            update,
-            session_id,
-            message,
-            intent=intent,
-            documents_processed=documents_processed,
-        )
-
-    def _log_event(
-        self,
-        message: str,
-        update: Update,
-        session_id: str | None,
-        telegram_message: Message | None,
-        *,
-        level: int = logging.INFO,
-        intent: str | None = None,
-        documents_processed: int | None = None,
-        exc_info: Exception | None = None,
-    ) -> None:
-        logger.log(
-            level,
-            message,
-            extra={
-                "channel": "telegram",
-                "telegram_chat_id": getattr(getattr(telegram_message, "chat", None), "id", None),
-                "telegram_user_id": getattr(
-                    getattr(telegram_message, "from_user", None), "id", None
-                ),
-                "session_id": session_id,
-                "update_id": update.update_id,
-                "intent": intent,
-                "documents_processed": documents_processed,
-            },
-            exc_info=exc_info,
-        )
+        if text.strip():
+            await self._bot.send_message(chat_id=chat_id, text=text)

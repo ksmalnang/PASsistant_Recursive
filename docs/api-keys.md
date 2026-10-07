@@ -25,9 +25,9 @@ This document provides step-by-step instructions on how to acquire and configure
  
 - **Purpose**: Powers layout-aware, page-by-page OCR extraction (retaining tabular format structures) when documents are uploaded.
 - **How to obtain**:
-  1. Go to [Zhipu AI Open Platform (BigModel)](https://open.bigmodel.cn/).
+  1. Go to [Zhipu AI Open Platform (Zhipu AI)](https://z.ai/).
   2. Register or log in to your account.
-  3. Go to the dashboard console and click on **API Keys** / **API Key Management** (API管理).
+  3. Go to the dashboard console and click on **API Keys** / **API Key Management**.
   4. Copy your unique API Key.
   5. In your `.env` file, set:
      ```env
