@@ -176,6 +176,14 @@ class Settings(BaseSettings):
     APP_ENV: str = Field(default="development")
     DEBUG: bool = Field(default=False)
     LOG_LEVEL: str = Field(default="INFO")
+    LOG_FORMAT: Literal["console", "json", "rfc5424"] = Field(
+        default="console",
+        description="Log output format: console (human-friendly), json (structured/APM), or rfc5424 (syslog)",
+    )
+    LOG_FILE: Optional[str] = Field(
+        default=None,
+        description="Optional file path for rotating log output",
+    )
     LOG_APP_NAME: str = Field(default="PASsistant")
     LOG_SYSLOG_FACILITY: int = Field(
         default=16,

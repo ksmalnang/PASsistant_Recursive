@@ -13,18 +13,25 @@ Usage:
 
 import logging
 import tomllib
+import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from src.__version__ import __version__
 from src.api.routes.router import router
 from src.clients import close_all_clients
-from src.config import build_logging_config, configure_logging, get_settings
+from src.config import (
+    build_logging_config,
+    configure_logging,
+    get_settings,
+    reset_log_context,
+    set_log_context,
+)
 from src.guardrails.rate_limit import InMemoryRateLimiter
 
 configure_logging()
@@ -80,6 +87,20 @@ if settings.is_production and allowed_origins == ["*"]:
     allowed_origins = []
 
 app.state.rate_limiter = InMemoryRateLimiter(limit=settings.RATE_LIMIT_PER_MINUTE)
+
+
+@app.middleware("http")
+async def log_context_middleware(request: Request, call_next):
+    """Inject request ID into log context for request tracing."""
+    request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:8]
+    token = set_log_context(request_id=request_id)
+    try:
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+    finally:
+        reset_log_context(token)
+
 
 app.add_middleware(
     CORSMiddleware,
