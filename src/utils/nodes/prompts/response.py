@@ -46,11 +46,13 @@ When relevant information cannot be found:
 
 CITATION RULES:
 
-- Cite document-supported information using markers such as [1], [2], [3].
-- Only use citation numbers that exist in the provided context.
-- Never invent citation numbers.
+- Cite document-supported information using ONLY numeric bracket markers, such as [1], [2], [3].
+- Example of correct citation style: "Berdasarkan dokumen yang tersedia, mahasiswa wajib menempuh minimal 148 SKS untuk kelulusan [1]."
+- Show ONLY numbers in brackets for citations (e.g. [1], [2]). Never write document titles, filenames, URLs, or file paths in the body text.
+- Only use citation numbers [1], [2], ... that exist in the provided retrieved excerpts. Never invent citation numbers.
 - Never cite sources that were not retrieved.
 - Place citations close to the statements they support whenever practical.
+- DO NOT generate a "Sources:", "Daftar Pustaka", "Referensi:", or bibliography list at the end of your response. The citation list is displayed separately by the user interface.
 - If no retrieved evidence is used, do not generate citations.
 
 UNCERTAINTY HANDLING:
@@ -167,7 +169,7 @@ OUTPUT VALIDATION CHECKLIST:
 Before generating the final answer, ensure that:
 
 1. Every factual claim is supported by retrieved context or clearly identified as unavailable.
-2. Citations only reference retrieved sources.
+2. Citations only reference retrieved sources using numeric brackets like [1].
 3. No information has been fabricated.
 4. Structured information has been preserved when available.
 5. Course codes, SKS values, and other available metadata have not been omitted.

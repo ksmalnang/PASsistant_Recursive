@@ -123,6 +123,10 @@ class Citation(BaseModel):
     score: Optional[float] = Field(default=None)
     chunk_id: Optional[str] = Field(default=None)
     snippet: Optional[str] = Field(default=None)
+    is_cited: bool = Field(
+        default=False,
+        description="Whether this citation was referenced inline in the response text",
+    )
 
 
 class AgentState(BaseModel):
