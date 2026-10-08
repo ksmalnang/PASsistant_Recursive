@@ -91,9 +91,14 @@ REDIS_URL=redis://redis:6379/0
 # Retrieval
 RETRIEVAL_STRATEGY=reranker
 RETRIEVAL_TOP_K=10
-RERANKER_MODEL=jinaai/jina-reranker-v2-base-multilingual
-RERANKER_BASE_URL=https://api.jina.ai/v1
-RERANKER_API_KEY=your_jina_key
+RERANKER_PROVIDER=openrouter
+RERANKER_MODEL=cohere/rerank-v3.5
+RERANKER_BASE_URL=https://openrouter.ai/api/v1
+# RERANKER_API_KEY is optional when OPENAI_API_KEY is configured
+RERANKER_FALLBACK_PROVIDER=jina
+RERANKER_FALLBACK_MODEL=jina-reranker-v3
+RERANKER_FALLBACK_BASE_URL=https://api.jina.ai/v1
+JINA_API_KEY=your_jina_key
 
 # API & Security
 RATE_LIMIT_PER_MINUTE=20
@@ -156,14 +161,14 @@ Config in `langgraph.json` points to `src/agent.py:compiled_app`.
 
 ## Monitoring
 
-- **LangSmith** — Full trace visibility for every LLM call, retrieval, and response
-- **Health endpoint** — `/health` reports Qdrant and Redis connectivity
-- **Structured logging** — RFC 5424 format with sequence IDs for request tracing
-- **Ingestion health** — Quality warnings reported per document (unrecognized headings, low chunk density)
+- **LangSmith** - Full trace visibility for every LLM call, retrieval, and response
+- **Health endpoint** - `/health` reports Qdrant and Redis connectivity
+- **Structured logging** - RFC 5424 format with sequence IDs for request tracing
+- **Ingestion health** - Quality warnings reported per document (unrecognized headings, low chunk density)
 
 ## Scaling Considerations
 
 - **Qdrant**: Supports horizontal scaling with sharding for large document collections
 - **Redis**: Single instance sufficient for caching; use Redis Cluster for HA
-- **App**: Stateless — scale horizontally behind a load balancer
+- **App**: Stateless - scale horizontally behind a load balancer
 - **LLM API**: Rate limits depend on provider tier; adjust `openrouter_min_interval_seconds` accordingly

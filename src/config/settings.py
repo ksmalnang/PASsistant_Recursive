@@ -98,21 +98,49 @@ class Settings(BaseSettings):
         ge=1,
         description="Number of hydrated context records to retrieve and expose to response generation",
     )
+    RERANKER_PROVIDER: Literal["openrouter", "jina", "custom", "local"] = Field(
+        default="openrouter",
+        description="Primary reranker provider: openrouter, jina, custom, or local",
+    )
     RERANKER_MODEL: Optional[str] = Field(
-        default=None,
+        default="cohere/rerank-v3.5",
         description="Reranker model used when RETRIEVAL_STRATEGY=reranker",
     )
     RERANKER_BASE_URL: Optional[str] = Field(
         default=None,
-        description="Remote reranker base URL. If unset, FastEmbed local reranking is used.",
+        description="Remote reranker base URL. If unset, OpenRouter base URL is used.",
     )
     RERANKER_API_KEY: Optional[str] = Field(
         default=None,
-        description="API key for the remote reranker endpoint",
+        description="API key for the remote reranker endpoint. If unset, OPENAI_API_KEY is used for OpenRouter.",
+    )
+    OPENROUTER_API_KEY: Optional[str] = Field(
+        default=None,
+        description="Explicit OpenRouter API key (defaults to OPENAI_API_KEY if unset)",
     )
     RERANKER_CANDIDATE_MULTIPLIER: int = Field(
         default=6,
         description="How many first-stage candidates to fetch per requested result before reranking",
+    )
+    RERANKER_FALLBACK_PROVIDER: Literal["jina", "local", "none"] = Field(
+        default="jina",
+        description="Fallback reranker provider if primary reranker fails: jina, local, or none",
+    )
+    RERANKER_FALLBACK_MODEL: str = Field(
+        default="jina-reranker-v3",
+        description="Fallback reranker model when RERANKER_FALLBACK_PROVIDER=jina",
+    )
+    RERANKER_FALLBACK_BASE_URL: str = Field(
+        default="https://api.jina.ai/v1",
+        description="Fallback reranker base URL",
+    )
+    RERANKER_FALLBACK_API_KEY: Optional[str] = Field(
+        default=None,
+        description="API key for the fallback reranker endpoint (or use JINA_API_KEY)",
+    )
+    JINA_API_KEY: Optional[str] = Field(
+        default=None,
+        description="Jina AI API key for fallback reranking",
     )
 
     # --- Chunking Configuration ---
@@ -148,6 +176,14 @@ class Settings(BaseSettings):
     APP_ENV: str = Field(default="development")
     DEBUG: bool = Field(default=False)
     LOG_LEVEL: str = Field(default="INFO")
+    LOG_FORMAT: Literal["console", "json", "rfc5424"] = Field(
+        default="console",
+        description="Log output format: console (human-friendly), json (structured/APM), or rfc5424 (syslog)",
+    )
+    LOG_FILE: Optional[str] = Field(
+        default=None,
+        description="Optional file path for rotating log output",
+    )
     LOG_APP_NAME: str = Field(default="PASsistant")
     LOG_SYSLOG_FACILITY: int = Field(
         default=16,

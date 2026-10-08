@@ -130,7 +130,7 @@ On each document indexing:
 ### Reranker (`RETRIEVAL_STRATEGY=reranker`)
 
 - First stage: same as RRF or similarity (wider candidate pool, 6x multiplier)
-- Second stage: cross-encoder reranker scores each candidate
+- Second stage: cross-encoder reranker scores each candidate (OpenRouter provider primary, with automatic Jina AI fallback)
 - Final threshold: score > 0.0
 
 ### Score Fields
