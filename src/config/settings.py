@@ -50,6 +50,36 @@ class Settings(BaseSettings):
         description="Embedding model for vector search",
     )
 
+    # --- Decision Model (Jev / TypeSafe) Configuration ---
+    DECISION_MODEL: str = Field(
+        default="typesafe/jev-1.13",
+        description="OpenRouter Decision model (typesafe/jev-1.13 or ~typesafe/jev-latest)",
+    )
+    DECISION_BASE_URL: str = Field(
+        default="https://openrouter.ai/api/alpha/decisions",
+        description="Decisions API endpoint for Jev requests",
+    )
+    DECISION_API_KEY: str | None = Field(
+        default=None,
+        description="API key for Decisions API (defaults to OPENAI_API_KEY if unset)",
+    )
+    DECISION_TIMEOUT_SECONDS: float = Field(
+        default=30.0,
+        description="Timeout for decision model HTTP requests",
+    )
+
+    # --- Jev Intent Classification ---
+    JEV_INTENT_ENABLED: bool = Field(
+        default=True,
+        description="Use Jev as the primary intent classifier instead of LLM",
+    )
+    JEV_INTENT_CONFIDENCE_THRESHOLD: float = Field(
+        default=0.65,
+        ge=0.0,
+        le=1.0,
+        description="Minimum Jev confidence to accept an intent classification without LLM fallback",
+    )
+
     # --- RAGAS Evaluation ---
     RAGAS_LLM_MODEL: str = Field(
         default="",

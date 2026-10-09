@@ -20,7 +20,7 @@ from src.services.document_processing import (
     DocumentProcessingService,
 )
 from src.services.indexing import DocumentIndexingService
-from src.services.intent import IntentClassifier
+from src.services.intent import INTENT_LABELS, IntentClassifier, JevIntentClassifier
 from src.services.response_generation import (
     ResponseContextBuilder,
     ResponseGenerationService,
@@ -45,8 +45,10 @@ __all__ = [
     "DocumentRetriever",
     "DocumentTextExtractor",
     "DocumentUploadPreparer",
+    "INTENT_LABELS",
     "InMemorySessionManager",
     "IntentClassifier",
+    "JevIntentClassifier",
     "LLMProvider",
     "OCRResult",
     "RetrievalStrategy",
