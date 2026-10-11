@@ -57,6 +57,9 @@ def _build_chat_model(
         base_url=settings.OPENAI_BASE_URL,
         temperature=temperature,
         streaming=streaming,
+        # langchain-openai only enables stream_usage by default for its own base
+        # URL; with a custom base URL a streaming call reports no token usage.
+        stream_usage=streaming,
         extra_body=extra_body,
         **kwargs,
     )

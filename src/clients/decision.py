@@ -39,6 +39,7 @@ import httpx
 from pydantic import BaseModel, field_validator
 
 from src.config import get_settings
+from src.telemetry import current_run
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +225,7 @@ class JevDecisionClient:
         """
         payload = self._build_payload(questions, state, model=model)
         response = await self._post(payload, session_id=session_id)
+        _record_decision_usage(response)
         return dict(response.answers)  # type: ignore[return-value]
 
     async def ask_noul(
@@ -448,6 +450,19 @@ async def aclose_decision_client() -> None:
 # ---------------------------------------------------------------------------
 # Internal utilities
 # ---------------------------------------------------------------------------
+
+
+def _record_decision_usage(response: DecisionResponse) -> None:
+    """Add this call's tokens and cost to the current run, when one is active."""
+    run = current_run()
+    if run is None:
+        return
+    run.record_tokens(
+        response.model or "decisions",
+        input_tokens=response.usage.input_tokens,
+        output_tokens=response.usage.output_tokens,
+        cost=response.usage.cost,
+    )
 
 
 def _estimate_size(state: Any) -> int:

@@ -15,7 +15,7 @@ from src.clients import (
     get_qdrant_client,
     get_reranker,
 )
-from src.clients.llm import REWRITE_MAX_TOKENS, get_rewrite_llm
+from src.clients.llm import REWRITE_MAX_TOKENS, get_response_llm, get_rewrite_llm
 from src.clients.reranker import RemoteReranker
 from src.utils.vector_store import VectorStoreTools
 
@@ -60,6 +60,32 @@ def test_unit_07_rewrite_provider_disables_reasoning(
     assert llm is not None
     assert llm.extra_body == {"reasoning": {"enabled": False}}
     assert llm.max_tokens == REWRITE_MAX_TOKENS
+
+
+def test_unit_09_response_provider_requests_stream_usage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The streaming answer model must ask for usage, or token totals stay empty.
+
+    langchain-openai only enables ``stream_usage`` by default for its own base URL,
+    so a custom (OpenRouter) base URL has to request it explicitly.
+    """
+    monkeypatch.setattr(
+        "src.clients.llm.get_settings",
+        lambda: SimpleNamespace(
+            OPENAI_API_KEY="test-key",
+            OPENAI_BASE_URL="https://openrouter.invalid/api/v1",
+            LLM_MODEL="test-model",
+            LLM_REASONING_ENABLED=False,
+        ),
+    )
+    monkeypatch.setattr("src.clients.llm._response_llm_instance", None)
+
+    llm = get_response_llm()
+
+    assert llm is not None
+    assert llm.streaming is True
+    assert llm.stream_usage is True
 
 
 def test_unit_02_closes_are_noops_before_initialization(

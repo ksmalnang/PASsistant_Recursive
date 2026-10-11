@@ -20,8 +20,10 @@ from src.api.models import (
     DocumentIngestionResponse,
 )
 from src.api.sessions import session_manager
+from src.config.logging import reset_log_context, set_log_context
 from src.guardrails.output_guard import OutputGuard
 from src.services.contracts import ChatAgent, DocumentProcessor, SessionManager
+from src.telemetry import current_run, end_run, start_run
 
 logger = logging.getLogger(__name__)
 
@@ -275,11 +277,19 @@ class ChatRouteService:
         answer_buffer = ""
         streamed_response = False
         final_state: Any | None = None
+        outcome = "aborted"
+        intent: str | None = None
+
+        telemetry_token = start_run(run_state.run_id, run_state.thread_id)
+        telemetry = current_run()
+        assert telemetry is not None
+        log_token = set_log_context(run_id=run_state.run_id, session_id=run_state.thread_id)
 
         async def emit_delta(response_text: str) -> None:
             nonlocal emitted_text
             delta = _next_delta(emitted_text, response_text)
             if delta:
+                telemetry.mark_first_token()
                 emitted_text = response_text
                 await append("message.delta", {"text": delta, "index": len(emitted_text)})
 
@@ -312,10 +322,18 @@ class ChatRouteService:
                     if streamed_response:
                         await emit_answer_text("", final=True)
                 elif update.kind == "status":
+                    stage = update.node or "workflow"
+                    duration_ms = telemetry.record_stage(stage)
+                    logger.info(
+                        "Stage %s finished in %d ms",
+                        stage,
+                        duration_ms,
+                        extra={"event": "stage", "stage": stage, "duration_ms": duration_ms},
+                    )
                     await append(
                         "run.status",
                         {
-                            "stage": update.node or "workflow",
+                            "stage": stage,
                             "label": _stage_label(update.node),
                             "meta": update.payload,
                         },
@@ -329,14 +347,17 @@ class ChatRouteService:
             if not streamed_response:
                 await emit_delta(response_text)
 
+            intent = getattr(final_state, "current_intent", None)
             if error := getattr(final_state, "error", None):
+                outcome = "failed"
                 await fail(str(error))
             else:
+                outcome = "completed"
                 await append(
                     "run.completed",
                     {
                         "response": response_text,
-                        "intent": getattr(final_state, "current_intent", None),
+                        "intent": intent,
                         "documents_processed": len(files or []),
                         "citations": [
                             c.model_dump(mode="json") if hasattr(c, "model_dump") else c
@@ -346,9 +367,27 @@ class ChatRouteService:
                 )
         except Exception:
             # Details go to the logs, not to the client.
+            outcome = "failed"
             logger.error("Streaming run failed", exc_info=True)
             await fail("The chat run failed unexpectedly.")
         finally:
+            summary = telemetry.summary()
+            logger.info(
+                "Run %s finished as %s in %d ms",
+                run_state.run_id,
+                outcome,
+                summary["total_ms"],
+                extra={
+                    "event": "run_summary",
+                    "outcome": outcome,
+                    "intent": intent,
+                    "documents_processed": len(files or []),
+                    "citations": len(_citations(final_state)) if final_state is not None else 0,
+                    **summary,
+                },
+            )
+            reset_log_context(log_token)
+            end_run(telemetry_token)
             run_state.done.set()
             for subscriber in list(run_state.subscribers):
                 await subscriber.put(None)

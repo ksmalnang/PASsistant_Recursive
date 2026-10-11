@@ -2,6 +2,7 @@
 
 import json
 import logging
+import sys
 from types import SimpleNamespace
 from typing import Any
 
@@ -130,6 +131,40 @@ def test_unit_json_formatter_exception() -> None:
 
     data = json.loads(formatter.format(record))
     assert "RuntimeError: Failure in task" in data["exception"]
+
+
+def test_unit_json_formatter_structured_error_and_correlation() -> None:
+    """JSON records promote correlation fields and expose a typed error object."""
+    formatter = JSONFormatter(environment="production", service="passistant", version="9.9.9")
+    token = set_log_context(request_id="req-1", session_id="sess-1")
+    try:
+        raise TimeoutError
+    except TimeoutError:
+        record = _make_record(
+            "Shutdown cleanup failed in aclose_decision_client: ",
+            level=logging.WARNING,
+            name="src.clients",
+            exc_info=sys.exc_info(),
+        )
+        record.event = "shutdown_cleanup_failed"  # type: ignore[attr-defined]
+        record.component = "aclose_decision_client"  # type: ignore[attr-defined]
+        record.duration_ms = 10000  # type: ignore[attr-defined]
+        ContextFilter().filter(record)
+
+        data = json.loads(formatter.format(record))
+    finally:
+        reset_log_context(token)
+
+    assert data["request_id"] == "req-1"
+    assert data["session_id"] == "sess-1"
+    assert data["event"] == "shutdown_cleanup_failed"
+    assert data["component"] == "aclose_decision_client"
+    assert data["duration_ms"] == 10000
+    assert data["service"] == "passistant"
+    assert data["version"] == "9.9.9"
+    assert data["error"]["type"] == "TimeoutError"
+    assert data["error"]["message"] == ""
+    assert "TimeoutError" in data["error"]["stack"]
 
 
 def test_unit_rfc5424_formatter() -> None:

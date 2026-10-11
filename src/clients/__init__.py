@@ -1,6 +1,7 @@
 """Process-wide clients for external systems."""
 
 import logging
+import time
 
 from src.clients.decision import (
     JevDecisionClient,
@@ -41,17 +42,31 @@ __all__ = [
 ]
 
 
+def _log_cleanup_failure(name: str, exc: Exception, started: float) -> None:
+    logger.warning(
+        "Shutdown cleanup failed in %s: %s",
+        name,
+        exc,
+        exc_info=True,
+        extra={
+            "event": "shutdown_cleanup_failed",
+            "component": name,
+            "duration_ms": round((time.perf_counter() - started) * 1000),
+        },
+    )
+
+
 async def aclose_all_clients() -> None:
     """Close every process-wide client. Safe to call more than once."""
     for close in (close_qdrant_client, close_cache, close_zai_client):
+        started = time.perf_counter()
         try:
             close()
         except Exception as exc:
-            logger.warning("Shutdown cleanup failed in %s: %s", close.__name__, exc, exc_info=True)
+            _log_cleanup_failure(close.__name__, exc, started)
 
+    started = time.perf_counter()
     try:
         await aclose_decision_client()
     except Exception as exc:
-        logger.warning(
-            "Shutdown cleanup failed in %s: %s", "aclose_decision_client", exc, exc_info=True
-        )
+        _log_cleanup_failure(aclose_decision_client.__name__, exc, started)

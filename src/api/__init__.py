@@ -12,6 +12,7 @@ Usage:
 """
 
 import logging
+import time
 import tomllib
 import uuid
 from collections.abc import AsyncGenerator
@@ -69,15 +70,37 @@ _meta = _get_project_metadata()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
-    logger.info("Starting %s", app.title)
+    logger.info("Starting %s", app.title, extra={"event": "startup"})
+    startup_token = set_log_context(phase="startup")
     try:
         VectorStoreTools().warm_up()
     except Exception:
         # Warm-up only moves model loading off the first query; serving continues.
-        logger.error("BM25 warm-up failed; hybrid retrieval will fail until it loads", exc_info=True)
+        logger.error(
+            "BM25 warm-up failed; hybrid retrieval will fail until it loads",
+            exc_info=True,
+            extra={"event": "warm_up_failed"},
+        )
+    finally:
+        reset_log_context(startup_token)
+
     yield
-    await aclose_all_clients()
-    logger.info("Shutting down %s", app.title)
+
+    shutdown_token = set_log_context(phase="shutdown")
+    try:
+        logger.info("Shutting down %s", app.title, extra={"event": "shutdown"})
+        started = time.perf_counter()
+        await aclose_all_clients()
+        logger.info(
+            "Shutdown cleanup finished in %.0f ms",
+            (time.perf_counter() - started) * 1000,
+            extra={
+                "event": "shutdown_cleanup_finished",
+                "duration_ms": round((time.perf_counter() - started) * 1000),
+            },
+        )
+    finally:
+        reset_log_context(shutdown_token)
 
 
 app = FastAPI(
@@ -97,12 +120,35 @@ app.state.rate_limiter = InMemoryRateLimiter(limit=settings.RATE_LIMIT_PER_MINUT
 
 @app.middleware("http")
 async def log_context_middleware(request: Request, call_next):
-    """Inject request ID into log context for request tracing."""
+    """Trace each request: correlation context plus one structured record per request."""
     request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:8]
     token = set_log_context(request_id=request_id)
+    started = time.perf_counter()
     try:
         response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "Request failed",
+            extra={
+                "event": "request_failed",
+                "method": request.method,
+                "path": request.url.path,
+                "duration_ms": round((time.perf_counter() - started) * 1000),
+            },
+        )
+        raise
+    else:
         response.headers["X-Request-ID"] = request_id
+        logger.info(
+            "Request completed",
+            extra={
+                "event": "request",
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "duration_ms": round((time.perf_counter() - started) * 1000),
+            },
+        )
         return response
     finally:
         reset_log_context(token)
