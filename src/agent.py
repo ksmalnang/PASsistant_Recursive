@@ -23,12 +23,14 @@ from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 from typing import Any, Optional
 
+from langchain_core.callbacks import UsageMetadataCallbackHandler
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
 from src.config import configure_logging, get_settings
 from src.graphs.workflow import compile_app, get_compiled_app
 from src.services.contracts import AgentStreamUpdate
+from src.telemetry import current_run
 from src.utils.nodes.document_processing import DocumentProcessingNode, get_document_processor
 from src.utils.state import AgentState
 
@@ -254,10 +256,16 @@ class PASsistantAgent:
 
     def _build_run_config(self) -> dict[str, Any]:
         """Build the runtime configuration for LangGraph execution."""
-        return {
+        config: dict[str, Any] = {
             "configurable": {"thread_id": self.session_id},
             "recursion_limit": 25,
         }
+        run = current_run()
+        if run is not None:
+            if run.usage_callback is None:
+                run.usage_callback = UsageMetadataCallbackHandler()
+            config["callbacks"] = [run.usage_callback]
+        return config
 
     async def _resolve_stream_final_state(
         self,

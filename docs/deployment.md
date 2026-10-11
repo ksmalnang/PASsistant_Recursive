@@ -114,8 +114,14 @@ TELEGRAM_WEBHOOK_SECRET_TOKEN=your_webhook_secret_here
 APP_ENV=production
 DEBUG=false
 LOG_LEVEL=INFO
+LOG_FORMAT=json
+LOG_FILE=/var/log/passistant/app.log
 REDIS_CACHE_TTL_SECONDS=600
 ```
+
+`LOG_FORMAT=json` keeps the fields you investigate with queryable (`request_id`, `event`,
+`error.type`, `duration_ms`); mount a volume for `LOG_FILE`, or configure the container log
+driver with a size cap, so records survive a restart.
 
 ## Telegram Bot Deployment
 
@@ -161,9 +167,9 @@ Config in `langgraph.json` points to `src/agent.py:compiled_app`.
 
 ## Monitoring
 
-- **LangSmith** - Full trace visibility for every LLM call, retrieval, and response
+- **LangSmith** - Full trace visibility for every LLM call, retrieval, and response (requires `LANGSMITH_API_KEY` in the process environment, not only in `.env`)
 - **Health endpoint** - `/health` reports Qdrant and Redis connectivity
-- **Structured logging** - RFC 5424 format with sequence IDs for request tracing
+- **Structured logging** - Set `LOG_FORMAT=json` for one JSON object per record, carrying `event`, `request_id`/`session_id`, `duration_ms`, and `error.type`/`error.message`/`error.stack`. `rfc5424` mode adds syslog sequence IDs for request tracing.
 - **Ingestion health** - Quality warnings reported per document (unrecognized headings, low chunk density)
 
 ## Scaling Considerations

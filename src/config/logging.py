@@ -14,10 +14,23 @@ from itertools import count
 from pathlib import Path
 from typing import Any
 
+from src.__version__ import __version__
 from src.config.settings import Settings, get_settings
 
 _SEQUENCE = count(1)
 _LOG_CONTEXT: ContextVar[dict[str, Any] | None] = ContextVar("log_context", default=None)
+
+# Everything a LogRecord carries by default; anything else was attached by the
+# caller (``extra=``) or by ContextFilter, and belongs in the structured payload.
+_LOG_RECORD_ATTRS = frozenset(logging.LogRecord("", 0, "", 0, "", (), None).__dict__)
+_STANDARD_RECORD_ATTRS = _LOG_RECORD_ATTRS | {"message", "asctime", "_context_data"}
+
+
+def _structured_fields(record: logging.LogRecord) -> dict[str, Any]:
+    """Return the caller-supplied fields on a record (``extra=`` plus log context)."""
+    return {
+        key: value for key, value in record.__dict__.items() if key not in _STANDARD_RECORD_ATTRS
+    }
 
 
 def set_log_context(**kwargs: Any) -> Token[dict[str, Any] | None]:
@@ -86,11 +99,12 @@ class ConsoleFormatter(logging.Formatter):
         )
         levelname = record.levelname.ljust(5)
 
-        # Contextual tags (e.g. session_id, request_id)
+        # Contextual tags (e.g. session_id, request_id) and caller fields
         ctx: dict[str, Any] = getattr(record, "_context_data", {})
+        fields = {**ctx, **_structured_fields(record)}
         ctx_str = ""
-        if ctx:
-            pairs = " ".join(f"{k}={v}" for k, v in ctx.items())
+        if fields:
+            pairs = " ".join(f"{k}={v}" for k, v in fields.items())
             ctx_str = f" [{pairs}]"
 
         message = record.getMessage()
@@ -120,9 +134,16 @@ class ConsoleFormatter(logging.Formatter):
 class JSONFormatter(logging.Formatter):
     """Render log records as single-line JSON objects for structured APM / aggregators."""
 
-    def __init__(self, environment: str = "development"):
+    def __init__(
+        self,
+        environment: str = "development",
+        service: str = "passistant",
+        version: str = "",
+    ):
         super().__init__()
         self.environment = environment
+        self.service = service
+        self.version = version
 
     def format(self, record: logging.LogRecord) -> str:
         timestamp = (
@@ -135,12 +156,16 @@ class JSONFormatter(logging.Formatter):
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
+            "service": self.service,
+            "environment": self.environment,
+            "version": self.version,
             "module": record.module,
             "line": record.lineno,
-            "environment": self.environment,
         }
 
-        # Include contextual metadata
+        # Correlation ids, event name, duration and any other caller field
+        payload.update(_structured_fields(record))
+
         ctx: dict[str, Any] = getattr(record, "_context_data", {})
         if ctx:
             payload["context"] = ctx
@@ -149,6 +174,11 @@ class JSONFormatter(logging.Formatter):
             exception_text = self.formatException(record.exc_info)
             if exception_text:
                 payload["exception"] = exception_text
+                payload["error"] = {
+                    "type": type(record.exc_info[1]).__name__,
+                    "message": str(record.exc_info[1]),
+                    "stack": exception_text,
+                }
 
         return json.dumps(payload, default=str)
 
@@ -282,6 +312,8 @@ def build_logging_config(settings: Settings | None = None) -> dict[str, Any]:
         "json": {
             "()": "src.config.logging.JSONFormatter",
             "environment": resolved.APP_ENV,
+            "service": resolved.LOG_APP_NAME,
+            "version": __version__,
         },
         "rfc5424": {
             "()": "src.config.logging.RFC5424Formatter",
@@ -368,3 +400,5 @@ def build_logging_config(settings: Settings | None = None) -> dict[str, Any]:
 def configure_logging(settings: Settings | None = None) -> None:
     """Apply centralized logging configuration."""
     logging.config.dictConfig(build_logging_config(settings))
+    # Route warnings.warn through logging so they reach the same handler and format.
+    logging.captureWarnings(True)
