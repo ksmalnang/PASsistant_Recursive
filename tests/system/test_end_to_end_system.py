@@ -17,12 +17,12 @@ from uuid import uuid4
 import httpx
 import pytest
 
+from src.clients.student_records import get_student_repository
 from src.utils.tools import VectorStoreTools
 from tests.factories import (
     build_pdf_bytes,
     make_chat_payload,
     make_record_query_by_id_message,
-    make_record_seed_message,
     make_student_record,
     make_upload,
 )
@@ -175,19 +175,9 @@ async def test_system_004_student_record_lookup_is_scoped(
     )
     thread_id = f"system-record-{uuid4().hex[:8]}"
 
-    other_seed = await system_api_client.post(
-        "/chat",
-        data=make_chat_payload(make_record_seed_message(other), thread_id=thread_id),
-    )
-    assert other_seed.status_code == 200
-    assert other_seed.json()["intent"] == "manage_record"
-
-    seeded_turn = await system_api_client.post(
-        "/chat",
-        data=make_chat_payload(make_record_seed_message(seeded), thread_id=thread_id),
-    )
-    assert seeded_turn.status_code == 200
-    assert seeded_turn.json()["intent"] == "manage_record"
+    repository = get_student_repository()
+    repository.create_record(other)
+    repository.create_record(seeded)
 
     lookup = await system_api_client.post(
         "/chat",

@@ -4,24 +4,10 @@ from langchain_core.messages import HumanMessage
 
 from src.services.contracts import LLMProvider
 from src.services.intent import IntentClassifier
+from src.utils.messages import conversation_transcript, message_text
 from src.utils.state import AgentState
 
-
-def _message_content_to_text(content: object) -> str:
-    """Normalize human message content into a plain string."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts: list[str] = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                text = item.get("text")
-                if text is not None:
-                    parts.append(str(text))
-        return "\n".join(part for part in parts if part)
-    return str(content)
+_HISTORY_LIMIT = 6
 
 
 class RouterNode:
@@ -32,7 +18,6 @@ class RouterNode:
     - upload_document: User wants to upload a document
     - query_student: User is asking about a student record or transcript-style data
     - query_document: User is asking about academic services or document content
-    - manage_record: User wants to create a student record from provided text or documents
     - general_chat: General conversation
     """
 
@@ -48,7 +33,7 @@ class RouterNode:
         else:
             self._classifier = IntentClassifier()
 
-    def run(self, state: AgentState) -> dict:
+    async def run(self, state: AgentState) -> dict:
         """
         Classify intent and update state routing flags.
 
@@ -64,7 +49,8 @@ class RouterNode:
         last_message = state.messages[-1]
         if not isinstance(last_message, HumanMessage):
             return {}
-        return self._classifier.classify(
-            _message_content_to_text(last_message.content),
+        return await self._classifier.classify(
+            message_text(last_message.content),
+            history=conversation_transcript(state.messages[:-1], limit=_HISTORY_LIMIT),
             session_id=state.session_id,
         )
