@@ -24,14 +24,6 @@ logger = logging.getLogger(__name__)
 # Shared keyword fast-paths (zero-cost, used by both classifiers)
 # ---------------------------------------------------------------------------
 
-upload_keywords = (
-    "upload",
-    "process this file",
-    "extract from",
-    "parse this",
-    "ingest",
-    "knowledge base",
-)
 academic_service_keywords = (
     "academic service",
     "academic services",
@@ -165,6 +157,10 @@ academic_service_keywords = (
     "kebijakan akademik",
     "panduan akademik",
     "buku pedoman",
+    "total sks",
+    "sks lulus",
+    "sks ditempuh",
+    "beban sks",
 )
 student_record_keywords = (
     "my gpa",
@@ -204,25 +200,14 @@ student_record_keywords = (
     "transkrip akademik",
     "jumlah sks saya",
     "sks saya",
-    "total sks",
-    "sks lulus",
-    "sks ditempuh",
-    "beban sks",
     "status akademik saya",
-    "status kuliah",
     "status mahasiswa saya",
     "status aktif saya",
-    "status studi",
     "nim saya",
     "nomor induk mahasiswa",
-    "data mahasiswa",
-    "data saya",
-    "profil mahasiswa",
     "riwayat akademik",
     "riwayat studi",
     "rekam akademik",
-    "data akademik",
-    "catatan akademik",
     "nilai saya semester ini",
     "nilai saya semester lalu",
     "ipk terbaru",
@@ -234,16 +219,14 @@ valid_intents = {
     "upload_document",
     "query_student",
     "query_document",
-    "manage_record",
     "general_chat",
 }
 
 INTENT_LABELS: dict[str, str] = {
     "upload_document": "The user wants to upload, process, or extract text/data from a file (e.g., PDF, image, document).",
-    "query_student": "The user is asking about a student record or transcript-style data (e.g., GPA, grades, transcript, credits, academic standing).",
-    "query_document": "The user is asking about academic policies, courses, procedures, deadlines, services, or the contents of documents (uploaded or system-provided).",
-    "manage_record": "The user wants to create or register student record data from provided text or documents.",
-    "general_chat": "The message is a greeting, casual conversation, or unrelated to academic services or records.",
+    "query_student": "Coming Soon",
+    "query_document": "The user is asking about academic policies, graduate, courses, procedures, deadlines, services, or the contents of documents (uploaded or system-provided), including a follow-up that refers back to such a topic.",
+    "general_chat": "A greeting or casual conversation, or a message with no academic referent even after resolving pronouns and ellipsis against the conversation history.",
 }
 
 
@@ -276,11 +259,18 @@ def _build_retrieval_intent(intent: str, user_text: str) -> dict[str, Any]:
 def _build_classification(intent: str, user_text: str) -> dict[str, Any]:
     """Build the full classification result dict from a raw intent string."""
     updates: dict[str, Any] = {"current_intent": intent}
-    if intent in {"query_document", "query_student", "manage_record"}:
+    if intent in {"query_document", "query_student"}:
         updates.update(_build_retrieval_intent(intent, user_text))
     elif intent == "upload_document":
         updates["requires_upload"] = True
     return updates
+
+
+def _decision_state(user_text: str, history: str | None) -> str:
+    """Combine the recent conversation with the message being classified."""
+    if not history:
+        return user_text
+    return f"Conversation so far:\n{history}\n\nLatest user message to classify:\n{user_text}"
 
 
 # ---------------------------------------------------------------------------
@@ -291,8 +281,6 @@ def _build_classification(intent: str, user_text: str) -> dict[str, Any]:
 def classify_by_keyword(user_text: str) -> str | None:
     """Try keyword fast-path classification. Returns intent string or None."""
     text_lower = user_text.lower()
-    if _keyword_matches(text_lower, upload_keywords):
-        return "upload_document"
     if _keyword_matches(text_lower, academic_service_keywords):
         return "query_document"
     if _keyword_matches(text_lower, student_record_keywords):
@@ -336,6 +324,7 @@ class JevIntentClassifier:
         self,
         user_text: str,
         *,
+        history: str | None = None,
         session_id: str | None = None,
     ) -> tuple[str, float | None, str | None]:
         """
@@ -348,8 +337,9 @@ class JevIntentClassifier:
         # 1. Keyword fast-path (zero-cost, synchronous)
         keyword_intent = classify_by_keyword(user_text)
         if keyword_intent is not None:
-            logger.debug(
-                "Intent classified by keyword: %s", keyword_intent,
+            logger.info(
+                "Intent classified by keyword: %s",
+                keyword_intent,
                 extra={"session": session_id},
             )
             return keyword_intent, 1.0, None
@@ -361,8 +351,13 @@ class JevIntentClassifier:
         try:
             client = self._decision_client or get_decision_client()
             answer = await client.ask_choice(
-                state=user_text,
-                instructions="Classify the user message into exactly one intent category.",
+                state=_decision_state(user_text, history),
+                instructions=(
+                    "Classify the latest user message into exactly one intent "
+                    "category, reading it in the context of the conversation. "
+                    "Prefer query_document unless the message explicitly asks "
+                    "about a specific student's own record data."
+                ),
                 criteria=INTENT_LABELS,
                 session_id=session_id,
             )
@@ -371,14 +366,19 @@ class JevIntentClassifier:
 
             if intent not in valid_intents:
                 logger.warning(
-                    "Jev returned unknown intent %r; falling back to LLM", intent,
+                    "Jev returned unknown intent %r; falling back to LLM",
+                    intent,
                     extra={"session": session_id},
                 )
-                return await self._fallback_to_llm(user_text, session_id=session_id)
+                return await self._fallback_to_llm(
+                    user_text, history=history, session_id=session_id
+                )
 
             if confidence >= threshold:
                 logger.info(
-                    "Jev intent: %s (confidence=%.3f)", intent, confidence,
+                    "Jev intent: %s (confidence=%.3f)",
+                    intent,
+                    confidence,
                     extra={"session": session_id},
                 )
                 return intent, confidence, None
@@ -386,30 +386,35 @@ class JevIntentClassifier:
             # Confidence too low -- fall back to LLM
             logger.info(
                 "Jev confidence %.3f below %.3f for intent %r; using LLM fallback",
-                confidence, threshold, intent,
+                confidence,
+                threshold,
+                intent,
                 extra={"session": session_id},
             )
             return await self._fallback_to_llm(
                 user_text,
+                history=history,
                 session_id=session_id,
                 hint=intent,
             )
 
         except Exception as exc:
             logger.warning(
-                "Jev intent classification failed: %s; falling back to LLM", exc,
+                "Jev intent classification failed: %s; falling back to LLM",
+                exc,
                 extra={
                     "session": session_id,
                     "jev_error": str(exc),
                     "jev_error_type": type(exc).__name__,
                 },
             )
-            return await self._fallback_to_llm(user_text, session_id=session_id)
+            return await self._fallback_to_llm(user_text, history=history, session_id=session_id)
 
     async def _fallback_to_llm(
         self,
         user_text: str,
         *,
+        history: str | None = None,
         session_id: str | None = None,
         hint: str | None = None,
     ) -> tuple[str, float | None, str]:
@@ -419,21 +424,24 @@ class JevIntentClassifier:
             if llm is None:
                 return "general_chat", None, "no_llm_available"
 
-            prompt = ROUTER_INTENT_PROMPT.format(message=user_text)
-            response = llm.invoke([HumanMessage(content=prompt)])
+            prompt = ROUTER_INTENT_PROMPT.format(message=_decision_state(user_text, history))
+            response = await llm.ainvoke([HumanMessage(content=prompt)])
             intent = str(response.content).strip().lower()
             if intent not in valid_intents:
                 intent = "general_chat"
 
             logger.info(
-                "LLM fallback intent: %s (hint=%s)", intent, hint,
+                "LLM fallback intent: %s (hint=%s)",
+                intent,
+                hint,
                 extra={"session": session_id},
             )
             return intent, None, "llm_fallback"
 
         except Exception as exc:
             logger.error(
-                "LLM fallback classification also failed: %s", exc,
+                "LLM fallback classification also failed: %s",
+                exc,
                 extra={"session": session_id},
             )
             return "general_chat", None, f"fallback_error: {exc}"
@@ -454,11 +462,9 @@ class IntentClassifier:
     """
     Intent classifier that uses Jev as primary (async) with LLM fallback.
 
-    The synchronous ``classify()`` method runs the async pipeline via
-    ``asyncio.run()`` for backward compatibility with ``RouterNode.run()``.
-
-    To use the async path directly in an async context, access
-    ``._jev.classify_async()`` for lower overhead.
+    ``classify()`` is async so the process-wide Jev HTTP client stays on the
+    caller's event loop. Running it through asyncio.run() per turn reused that
+    client across closed loops and failed with "Event loop is closed".
     """
 
     def __init__(
@@ -495,38 +501,40 @@ class IntentClassifier:
         self._jev = JevIntentClassifier(**self._jev_kwargs)
         return self._jev
 
-    def classify(self, user_text: str, session_id: str | None = None) -> dict[str, Any]:
+    async def classify(
+        self,
+        user_text: str,
+        session_id: str | None = None,
+        *,
+        history: str | None = None,
+    ) -> dict[str, Any]:
         """Return routing metadata for a user message.
 
         Uses Jev as primary; falls back to LLM when confidence is low.
         """
         jev = self._get_jev()
-        if jev is not None:
-            import asyncio
+        if jev is None:
+            return await self._classify_llm_only(user_text, session_id=session_id, history=history)
 
-            intent, confidence, fallback = asyncio.run(
-                jev.classify_async(user_text, session_id=session_id)
-            )
-            result = _build_classification(intent, user_text)
-            if confidence is not None:
-                result["intent_confidence"] = confidence
-            if fallback is not None:
-                result["intent_fallback"] = fallback
-            return result
+        intent, confidence, fallback = await jev.classify_async(
+            user_text, history=history, session_id=session_id
+        )
+        result = _build_classification(intent, user_text)
+        if confidence is not None:
+            result["intent_confidence"] = confidence
+        if fallback is not None:
+            result["intent_fallback"] = fallback
+        return result
 
-        return self._classify_llm_only(user_text, session_id=session_id)
-
-    def _classify_llm_only(
-        self, user_text: str, session_id: str | None = None
+    async def _classify_llm_only(
+        self,
+        user_text: str,
+        session_id: str | None = None,
+        *,
+        history: str | None = None,
     ) -> dict[str, Any]:
         """Original LLM-only classification path (Jev disabled)."""
         text_lower = user_text.lower()
-
-        if _keyword_matches(text_lower, upload_keywords):
-            return {
-                "current_intent": "upload_document",
-                "requires_upload": True,
-            }
 
         if _keyword_matches(text_lower, academic_service_keywords):
             return _build_retrieval_intent("query_document", user_text)
@@ -539,8 +547,8 @@ class IntentClassifier:
             if llm is None:
                 return {"current_intent": "general_chat"}
 
-            prompt = ROUTER_INTENT_PROMPT.format(message=user_text)
-            response = llm.invoke([HumanMessage(content=prompt)])
+            prompt = ROUTER_INTENT_PROMPT.format(message=_decision_state(user_text, history))
+            response = await llm.ainvoke([HumanMessage(content=prompt)])
             intent = str(response.content).strip().lower()
             if intent not in valid_intents:
                 intent = "general_chat"

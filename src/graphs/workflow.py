@@ -55,31 +55,14 @@ def route_by_intent(
     """
     intent = state.current_intent
 
-    if intent == "upload_document" or state.requires_upload:
+    if intent == "upload_document" or state.requires_upload or state.pending_documents:
         return "process_document"
-    elif intent in ["query_student", "manage_record"]:
+    elif intent == "query_student":
         return "handle_student"
     elif intent == "query_document" or state.requires_retrieval:
         return "retrieve"
     else:
         return "generate_response"
-
-
-def check_processing_status(
-    state: AgentState,
-) -> Literal["handle_student", "generate_response"]:
-    """
-    Check if document processing succeeded and route accordingly.
-
-    If documents were processed for student records, route to student handler.
-    Otherwise, generate response about processing results.
-
-    Returns:
-        Next node name
-    """
-    if state.current_intent == "manage_record" and state.processed_documents:
-        return "handle_student"
-    return "generate_response"
 
 
 def check_student_resolution(
@@ -249,15 +232,8 @@ def create_workflow(nodes: WorkflowNodes | None = None) -> StateGraph:
         },
     )
 
-    # Document processing -> check status
-    workflow.add_conditional_edges(
-        "process_document",
-        check_processing_status,
-        {
-            "handle_student": "handle_student",
-            "generate_response": "generate_response",
-        },
-    )
+    # Document processing -> response
+    workflow.add_edge("process_document", "generate_response")
 
     # Student handler -> retrieval or response
     workflow.add_conditional_edges(
@@ -320,9 +296,7 @@ def compile_app(checkpointer=None, nodes: WorkflowNodes | None = None):
         interrupt_before=["process_document"],  # Allow human review before processing
     )
 
-    logger.info(
-        "Application compiled with checkpointer: %s", type(checkpointer).__name__
-    )
+    logger.info("Application compiled with checkpointer: %s", type(checkpointer).__name__)
     return app
 
 

@@ -48,6 +48,10 @@ class FakeLLM:
         self.prompts.append(messages)
         return SimpleNamespace(content=self.response)
 
+    async def ainvoke(self, messages: Sequence[Any], /, **kwargs: Any) -> SimpleNamespace:
+        """Async counterpart used by the classifier fallback path."""
+        return self.invoke(messages, **kwargs)
+
 
 class FakeLLMProvider:
     """Callable LLM provider that counts how often it was resolved."""
@@ -68,11 +72,13 @@ class FakeDecisionClient:
         self.choice = choice
         self.confidence = confidence
         self.calls = 0
+        self.states: list[Any] = []
 
     async def ask_choice(self, *args: Any, **kwargs: Any) -> Any:
         from src.clients.decision import ChoiceAnswer
 
         self.calls += 1
+        self.states.append(kwargs.get("state"))
         return ChoiceAnswer(
             choice=self.choice,
             confidence=self.confidence,

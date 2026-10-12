@@ -87,24 +87,6 @@ def make_student_record(
     )
 
 
-def make_record_seed_message(record: StudentRecord) -> str:
-    """Build a message that asks the workflow to register a student record.
-
-    The wording deliberately avoids every router keyword bucket (upload,
-    academic-service, student-record) so the live system classifies it through
-    the LLM as ``manage_record``. Labels stay readable for the record extractor:
-    ``ID``/``Email``/``Grade average``/``Study program``.
-    """
-    return (
-        "Please create a new student profile in the registry. "
-        f"Full name: {record.full_name}. "
-        f"ID: {record.student_id}. "
-        f"Email: {record.email}. "
-        f"Grade average: {record.gpa}. "
-        f"Study program: {record.program}."
-    )
-
-
 def make_record_query_by_id_message(student_id: str) -> str:
     """Build a direct student-record lookup message by student id."""
     return f"Show the student record for student id {student_id}."

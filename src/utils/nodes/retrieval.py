@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage
 from src.clients.llm import get_rewrite_llm
 from src.config import get_settings
 from src.services.contracts import DocumentRetriever
+from src.utils.messages import conversation_transcript
 from src.utils.nodes.prompts import QUERY_REWRITE_PROMPT
 from src.utils.state import AgentState, DocumentType
 from src.utils.tools import VectorStoreTools
@@ -77,6 +78,7 @@ class RetrievalNode:
 
     # A rewrite only needs enough of a long pasted message to find its keywords.
     _REWRITE_INPUT_LIMIT = 500
+    _HISTORY_LIMIT = 2
 
     def __init__(
         self,
@@ -178,7 +180,8 @@ class RetrievalNode:
             return [original]
 
         queries = [original]
-        rewritten = await self._rewrite_query(original)
+        history = conversation_transcript(state.messages[:-1], limit=self._HISTORY_LIMIT)
+        rewritten = await self._rewrite_query(original, history)
         if rewritten and rewritten.lower() != original.lower():
             queries.append(rewritten)
 
@@ -187,12 +190,15 @@ class RetrievalNode:
             queries.append(expanded)
         return queries[: self.max_query_variants]
 
-    async def _rewrite_query(self, question: str) -> str:
+    async def _rewrite_query(self, question: str, history: str) -> str:
         """Compress a conversational question into a keyword-rich retrieval query."""
         llm = self._get_llm()
         if llm is None:
             return question
-        prompt = QUERY_REWRITE_PROMPT.format(question=question[: self._REWRITE_INPUT_LIMIT])
+        prompt = QUERY_REWRITE_PROMPT.format(
+            history=history or "(no prior turns)",
+            question=question[: self._REWRITE_INPUT_LIMIT],
+        )
         try:
             response = await llm.ainvoke([HumanMessage(content=prompt)])
             rewritten = str(response.content).strip()
@@ -329,7 +335,6 @@ class RetrievalNode:
             if self._is_strategy_strong_hit(result, strategy):
                 strong_hits += 1
 
-        results[:] = scored_results
         top_score = float(scored_results[0].get("score") or 0.0)
         second_score = (
             float(scored_results[1].get("score") or 0.0)
