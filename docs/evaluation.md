@@ -1,6 +1,8 @@
 # Evaluation Guide
 
-Panduan lengkap untuk menjalankan evaluasi RAG pipeline PASsistant menggunakan framework [RAGAS](https://docs.ragas.io/).
+Panduan membuat testset, menjalankan evaluasi RAGAS, dan membandingkan strategi retrieval
+pada pipeline PASsistant. OpenRouter dipakai sebagai penyedia LLM untuk pembuatan testset
+maupun penilaian (judge).
 
 ---
 
@@ -9,356 +11,488 @@ Panduan lengkap untuk menjalankan evaluasi RAG pipeline PASsistant menggunakan f
 - [Overview](#overview)
 - [Prasyarat](#prasyarat)
 - [Instalasi](#instalasi)
-- [Menjalankan Evaluasi](#menjalankan-evaluasi)
-  - [Cara 1 — Script (Recommended)](#cara-1--script-recommended)
-  - [Cara 2 — Module Langsung](#cara-2--module-langsung)
+- [Format Testset](#format-testset)
+  - [Skema JSONL](#skema-jsonl)
+  - [Isi metadata](#isi-metadata)
+  - [Pertanyaan yang tidak ada jawabannya](#pertanyaan-yang-tidak-ada-jawabannya)
 - [Mode Evaluasi](#mode-evaluasi)
-  - [Fixture Mode](#fixture-mode)
-  - [Live Mode](#live-mode)
+  - [Fixture](#fixture)
+  - [Live](#live)
 - [Metrics](#metrics)
-- [Membandingkan Retrieval Strategy](#membandingkan-retrieval-strategy)
-- [Dataset](#dataset)
-- [Laporan Hasil](#laporan-hasil)
+- [Perintah](#perintah)
+  - [validate](#validate)
+  - [build-dataset](#build-dataset)
+  - [evaluate](#evaluate)
+  - [compare](#compare)
+  - [sweep](#sweep)
+- [Artefak Output](#artefak-output)
+- [Membandingkan Strategi Retrieval](#membandingkan-strategi-retrieval)
+- [Environment Variables](#environment-variables)
+- [Struktur Kode](#struktur-kode)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Overview
 
-Evaluasi mengukur kualitas seluruh pipeline RAG — dari retrieval hingga response generation — menggunakan RAGAS sebagai LLM-as-judge. Ada dua entry point:
+Seluruh alur evaluasi dijalankan lewat satu CLI:
 
-| Entry Point | Output Nama File | Cocok Untuk |
-|---|---|---|
-| `scripts/run_ragas_eval.py` | `YYYYMMDD_HHMMSS_<dataset>_ragas_report.json` | Eksperimen, perbandingan antar run |
-| `uv run ragas-eval` | Manual via `--output` | Skrip otomatis / CI |
+```bash
+uv run ragas-eval <command> [options]
+# ekuivalen dengan
+uv run python -m src.eval <command> [options]
+```
+
+| Command | Fungsi |
+|---|---|
+| `validate` | Memeriksa testset JSONL dan menampilkan statistiknya |
+| `build-dataset` | Membuat testset dengan RAGAS dari dokumen yang sudah terindeks |
+| `evaluate` | Menilai testset dengan RAGAS dan menulis laporan |
+| `compare` | Menggabungkan beberapa laporan menjadi tabel perbandingan strategi |
+| `sweep` | Menjalankan evaluasi live untuk setiap strategi retrieval, lalu membandingkannya |
 
 ---
 
 ## Prasyarat
 
-- Python 3.11+
-- [UV](https://docs.astral.sh/uv/getting-started/installation/) terinstal
-- File `.env` sudah dikonfigurasi (minimal `OPENAI_API_KEY`, `OPENAI_BASE_URL`)
-- Untuk **live mode**: Qdrant berjalan dan dokumen sudah diindeks
+- Python 3.11+ dan [UV](https://docs.astral.sh/uv/getting-started/installation/)
+- `.env` terkonfigurasi minimal `OPENAI_API_KEY` (dipakai sebagai kunci OpenRouter) dan
+  `OPENAI_BASE_URL`
+- Untuk **live mode** dan **build-dataset**: Qdrant berjalan dan dokumen sudah diindeks
 
 ---
 
 ## Instalasi
 
-Install dependensi eval (terpisah dari dependensi utama):
+Dependensi evaluasi terpisah dari dependensi utama:
 
 ```bash
 uv sync --extra eval
 ```
 
-Verifikasi instalasi:
+Verifikasi:
 
 ```bash
 uv run python -c "import ragas; print(ragas.__version__)"
 ```
 
-> **Jika `uv sync` gagal** karena error `Access is denied` pada file `.exe`:
-> ada proses lain yang mengunci file tersebut (biasanya server API masih berjalan).
-> Hentikan proses tersebut dulu, lalu ulangi `uv sync --extra eval`.
+> **Catatan kompatibilitas.** RAGAS 0.4.3 mengimpor
+> `langchain_community.chat_models.vertexai`, yang sudah dihapus di langchain-community 0.4.x.
+> Paket `src/eval/_compat.py` menyediakan stand-in untuk modul tersebut sehingga RAGAS tetap
+> bisa diimpor pada jalur OpenAI-compatible (OpenRouter). Shim ini otomatis aktif saat paket
+> `src.eval` diimpor dan bisa dihapus setelah RAGAS dan langchain-community selaras kembali.
 
 ---
 
-## Menjalankan Evaluasi
+## Format Testset
 
-### Cara 1 — Script (Recommended)
+Testset hanya berisi **ground truth**. Jawaban kandidat (`response`) dan konteks hasil
+retrieval (`retrieved_contexts`) tidak disimpan di testset; keduanya dihasilkan oleh pipeline
+(live mode) atau dibaca dari file responses (fixture mode).
 
-Script `scripts/run_ragas_eval.py` secara otomatis memberi nama output file dengan format
-`YYYYMMDD_HHMMSS_<dataset-stem>_ragas_report.json` di folder `src/eval/reports/`.
+### Skema JSONL
 
-**Sintaks dasar:**
+Satu objek JSON per baris:
 
-```bash
-python scripts/run_ragas_eval.py <path-ke-dataset>
+```jsonl
+{"id":"q_001","user_input":"syarat daftar sidang skripsi apa aja?","reference":"Mahasiswa harus lulus minimal 138 SKS, sudah menyelesaikan seminar proposal, dan mengisi form pendaftaran sidang di SIAKAD.","reference_contexts":["Mahasiswa dapat mendaftar sidang skripsi apabila telah lulus minimal 138 SKS dan seminar proposal."],"metadata":{"topic":"skripsi","question_type":"multi_doc","answerable":true,"source_doc_ids":["doc_12"],"source_doc_version":"2025-05-12","author":"admin_prodi","dataset_version":"v1"}}
+{"id":"q_002","user_input":"Berapa biaya legalisir ijazah?","reference":"Informasi tidak tersedia dalam dokumen. Bot seharusnya menyarankan menghubungi bagian akademik.","reference_contexts":[],"metadata":{"topic":"alumni","question_type":"simple","answerable":false,"source_doc_ids":[],"source_doc_version":null,"author":"admin_prodi","dataset_version":"v1"}}
 ```
 
-**Contoh:**
+| Field | Tipe | Wajib | Keterangan |
+|---|---|---|---|
+| `id` | `str` | ✅ | ID unik pertanyaan, mis. `q_001` |
+| `user_input` | `str` | ✅ | Pertanyaan mahasiswa, ditulis natural (singkatan/gaya santai boleh) |
+| `reference` | `str` | ✅ | Jawaban benar yang ditulis manusia berdasarkan dokumen resmi |
+| `reference_contexts` | `list[str]` | disarankan | Kutipan dokumen pendukung jawaban |
+| `metadata` | `object` | ✅ | **Tidak dibaca RAGAS**; dipakai untuk analisis skor |
 
-```bash
-# Fixture mode (default) — cepat, tidak perlu pipeline berjalan
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl
+### Isi metadata
 
-# Live mode — menjalankan pipeline RAG secara penuh
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl --mode live
-
-# Extended metrics (8 metrik)
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl --metrics-tier extended
-
-# Ganti direktori output
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl --output-dir my_reports
-```
-
-**Output yang dihasilkan:**
-
-```
-src/eval/reports/20260715_103042_140726_kurikulum_01_ragas_report.json
-```
-
-**Semua flag yang tersedia:**
-
-| Flag | Default | Keterangan |
+| Field | Contoh | Fungsi |
 |---|---|---|
-| `dataset` | *(wajib)* | Path ke file JSONL |
-| `--mode` | `fixture` | `fixture` atau `live` |
-| `--metrics-tier` | `core` | `core` (4 metrik) atau `extended` (8 metrik) |
-| `--k-eval` | `5` | Jumlah chunk yang diambil saat live mode |
-| `--output-dir` | `src/eval/reports` | Direktori output laporan |
-| `--fixture` | *(tidak ada)* | Path ke pre-computed responses JSON (fixture mode) |
-| `--openrouter-max-retries` | `6` | Maks retry untuk error transient OpenRouter |
-| `--openrouter-min-interval-seconds` | `0.3` | Jeda minimum antar request ke OpenRouter |
-| `--openrouter-backoff-base-seconds` | `2.0` | Base backoff eksponensial untuk retry |
+| `topic` | `skripsi`, `krs`, `cuti` | Analisis skor per topik |
+| `question_type` | `simple`, `multi_doc`, `conditional` | Analisis per tingkat kesulitan |
+| `answerable` | `true` / `false` | Menandai pertanyaan di luar cakupan dokumen |
+| `source_doc_ids` | `["doc_12"]` | Dokumen sumber jawaban |
+| `source_doc_version` | `"2025-05-12"` | Versi dokumen saat kunci jawaban ditulis (boleh `null`) |
+| `author` | `"ksma"` | Penulis kunci jawaban |
+| `dataset_version` | `"v1"` | Versi testset |
 
-> **Ctrl+C:** Script menggunakan `os._exit(1)` — menekan Ctrl+C akan langsung menghentikan
-> proses termasuk semua thread yang sedang blocking. Tidak perlu force-kill dari Task Manager.
+Validator memeriksa tipe `question_type` (harus `simple`/`multi_doc`/`conditional`),
+`answerable` (boolean), `source_doc_ids` (list of string), dan tipe string untuk field teks.
+Field lain bebas dan ikut tersimpan.
 
----
+### Pertanyaan yang tidak ada jawabannya
 
-### Cara 2 — Module Langsung
-
-Gunakan ini jika butuh kontrol penuh atas nama file output:
-
-```bash
-uv run python -m src.eval.ragas \
-    --dataset tests/fixtures/140726_kurikulum_01.jsonl \
-    --mode fixture \
-    --metrics-tier core \
-    --output src/eval/reports/my_custom_report.json
-```
+Sertakan pertanyaan dengan `answerable: false`. Kunci jawabannya adalah pesan fallback,
+sehingga bisa dinilai apakah bot berhalusinasi atau jujur mengatakan tidak tahu. Contoh di
+atas (`q_002`) memakai `reference_contexts` kosong.
 
 ---
 
 ## Mode Evaluasi
 
-### Fixture Mode
+| | Fixture | Live |
+|---|---|---|
+| Sumber `response` | File `--fixture` | Pipeline response generation |
+| Sumber `retrieved_contexts` | File `--fixture` | Chunk hasil retrieval dari Qdrant |
+| Butuh Qdrant | Tidak | Ya |
+| Biaya | Hanya panggilan judge | Judge + retrieval + generate jawaban |
+| Reproducible | Ya | Tergantung isi index |
 
-Menggunakan jawaban yang sudah ada di kolom `answer` dan konteks di kolom `contexts` dalam dataset JSONL.
-**Tidak** memanggil pipeline RAG secara langsung.
+### Fixture
 
-- ✅ Cepat
-- ✅ Tidak butuh Qdrant / pipeline berjalan
-- ✅ Reproducible — hasil konsisten di setiap run
-- ❌ Tidak mengukur kualitas retrieval terkini
-
-```bash
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl --mode fixture
-```
-
-Jika punya file responses terpisah (pre-computed dari run sebelumnya):
-
-```bash
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl \
-    --mode fixture \
-    --fixture path/to/responses.json
-```
-
-Format file fixture:
+Fixture mode **membutuhkan** file responses lewat `--fixture`; testset sendiri tidak menyimpan
+jawaban. Setiap `id` di testset harus punya entri di file responses:
 
 ```json
 {
-  "ragas_q1": {
-    "response": "Jawaban yang sudah digenerate...",
-    "retrieved_contexts": ["Teks chunk 1...", "Teks chunk 2..."]
+  "q_001": {
+    "response": "Syaratnya lulus minimal 138 SKS dan sudah seminar proposal [1].",
+    "retrieved_contexts": ["Mahasiswa dapat mendaftar sidang skripsi apabila telah lulus minimal 138 SKS dan seminar proposal."]
   }
 }
 ```
 
----
-
-### Live Mode
-
-Menjalankan seluruh pipeline RAG untuk setiap sampel: retrieval dari Qdrant → response generation via LLM.
-Hasil kemudian di-scoring oleh RAGAS.
-
-- ✅ Mengukur performa pipeline yang sebenarnya
-- ✅ Berguna untuk membandingkan konfigurasi retrieval
-- ❌ Butuh Qdrant berjalan dan dokumen sudah diindeks
-- ❌ Lebih lambat dan ada biaya API
-
-**Prasyarat live mode:**
-
 ```bash
-# Pastikan Qdrant berjalan
-bash scripts/run_qdrant.sh
-
-# Pastikan dokumen sudah diindeks
-curl http://localhost:6333/collections
+uv run ragas-eval evaluate --dataset testset.jsonl \
+    --mode fixture --fixture testset.responses.json
 ```
 
+File ini dihasilkan otomatis oleh `build-dataset` (lihat di bawah), sehingga hasil evaluasi
+bisa direproduksi tanpa memanggil pipeline lagi.
+
+### Live
+
+Menjalankan seluruh pipeline RAG untuk setiap pertanyaan: retrieval dari Qdrant lalu response
+generation. Live mode membutuhkan LLM aplikasi (`OPENAI_API_KEY`) dan Qdrant; jika LLM tidak
+tersedia, evaluasi berhenti dengan pesan jelas alih-alih menilai jawaban fallback.
+
 ```bash
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl \
-    --mode live \
-    --k-eval 5
+uv run ragas-eval evaluate --dataset testset.jsonl --mode live --top-k 8
 ```
 
 ---
 
 ## Metrics
 
-### Tier Core (default)
+Setiap evaluasi menjalankan tiga metrik RAGAS:
 
-Selalu dijalankan. Mengukur kualitas inti pipeline RAG.
+| Metrik | Field yang dipakai |
+|---|---|
+| `faithfulness` | `user_input`, `response`, `retrieved_contexts` |
+| `context_recall` | `user_input`, `retrieved_contexts`, `reference` |
+| `factual_correctness(mode=f1)` | `response`, `reference` |
 
-| Metrik | Yang Diukur | Rentang |
+Semua metrik dinilai oleh LLM judge dari OpenRouter. Skor yang gagal dihitung dicatat sebagai
+`null` pada sampel tersebut dan **tidak** dihitung dalam rata-rata; jumlah sampel yang berhasil
+di-scoring dilaporkan pada field `scored`. Metrik yang gagal di **semua** sampel tetap muncul
+dengan `mean: null` dan `scored: 0`, jadi tidak ada metrik yang hilang dari laporan.
+
+---
+
+## Perintah
+
+### validate
+
+Memvalidasi seluruh baris testset dan menampilkan statistik (jumlah sampel, cakupan reference
+context, sebaran metadata):
+
+```bash
+uv run ragas-eval validate --dataset testset.jsonl
+```
+
+Baris dengan JSON rusak, field wajib hilang, atau metadata bertipe salah akan dilaporkan
+beserta nomor barisnya, dan perintah keluar dengan status non-zero.
+
+### build-dataset
+
+Membuat testset sintetis dengan RAGAS `TestsetGenerator` dari chunk yang diambil dari Qdrant.
+Chunk disampling merata antar dokumen agar tidak didominasi satu PDF. Secara default pipeline
+asli juga dijalankan untuk menangkap `response` dan `retrieved_contexts` tiap pertanyaan dan
+menyimpannya sebagai file responses *sidecar* (`<output>.responses.json`), sehingga testset
+tetap bersih dan evaluasi bisa direproduksi di fixture mode.
+
+```bash
+uv run ragas-eval build-dataset --output testset.jsonl --testset-size 20
+```
+
+| Flag | Default | Keterangan |
 |---|---|---|
-| **Faithfulness** | Apakah jawaban berdasarkan konteks yang diambil? (deteksi halusinasi) | 0–1 |
-| **Answer Relevancy** | Apakah jawaban relevan dan fokus ke pertanyaan? | 0–1 |
-| **Context Precision** | Signal-to-noise ratio — apakah dokumen relevan di-ranking tertinggi? | 0–1 |
-| **Context Recall** | Apakah retrieval menemukan semua informasi yang dibutuhkan? | 0–1 |
+| `--output` | *(wajib)* | Path testset JSONL tujuan |
+| `--testset-size` | `20` | Jumlah pasangan Q&A yang digenerate |
+| `--sample-size` | otomatis: 4×`--testset-size`, dibatasi 12–200 | Jumlah chunk sumber; **faktor biaya utama** |
+| `--per-document-limit` | `30` | Batas chunk per dokumen |
+| `--collection` | dari `.env` | Override koleksi Qdrant |
+| `--no-pipeline` | mati | Lewati capture responses (hanya menulis testset) |
+| `--responses` | `<output>.responses.json` | Path sidecar responses |
+| `--dataset-version` | `v1` | Nilai `metadata.dataset_version` |
+| `--seed` | `42` | Seed sampling chunk |
+| `--min-interval`, `--jitter`, `--max-retries`, `--backoff` | `0.3`, `0.15`, `6`, `2.0` | Kontrol pacing/retry OpenRouter (tidak dibaca dari `.env`) |
 
-### Tier Extended (opsional)
+Metadata yang diisi generator: `question_type` dari jenis synthesizer RAGAS
+(`single_hop` → `simple`, `multi_hop` → `multi_doc`), `answerable: true`,
+`source_doc_ids` dari dokumen asal reference context, `author: "ragas"`, dan
+`dataset_version`. Jika pipeline gagal atau retrieval mengembalikan nol konteks, sampel
+ditandai lewat `metadata.pipeline_failure`; konteksnya tidak dipalsukan.
 
-Tambahan 4 metrik di atas metrik core.
+#### Progress saat generasi
 
-| Metrik | Yang Diukur |
-|---|---|
-| **Factual Correctness** | Akurasi faktual dibanding ground truth |
-| **Semantic Similarity** | Kemiripan embedding antara jawaban dan referensi |
-| **Context Entity Recall** | Apakah entitas dari ground truth ada di konteks? |
-| **Noise Sensitivity** | Ketahanan terhadap chunk yang tidak relevan |
+RAGAS mencetak progress bar `tqdm` sendiri: satu bar per langkah transform
+(`Extracting ...`, `Embedding ...`, dst.), lalu `Generating Scenarios` dan
+`Generating Samples`. Total pada bar `Generating Samples` sama dengan
+`--testset-size`, jadi bar itu menunjukkan berapa sampel yang sudah selesai.
+
+Pada console yang menangkap output (bukan TTY), bar `tqdm` bisa kolaps menjadi satu
+angka saja. Karena itu CLI juga menulis baris log biasa: satu baris saat generasi mulai,
+satu baris `still running (elapsed ...)` setiap 20 detik, dan satu baris ringkasan
+jumlah sampel serta durasi saat selesai.
+
+#### Biaya dan waktu
+
+Waktu generasi ditentukan oleh `--sample-size`, **bukan** `--testset-size`. Saat analisis,
+RAGAS menjalankan beberapa panggilan LLM per chunk sumber: `HeadlinesExtractor` dan
+`SummaryExtractor` per dokumen, lalu `CustomNodeFilter`, `ThemesExtractor`, dan
+`NERExtractor` per chunk. Artinya 200 chunk bisa berarti ratusan hingga sekitar seribu
+panggilan LLM, berapa pun `--testset-size`-nya.
+
+Kalau `--sample-size` tidak diisi, nilainya diskalakan dari `--testset-size` (4×, minimal
+12, maksimal 200). Untuk testset kecil, misalnya 2 sampel, cukup:
 
 ```bash
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl \
-    --metrics-tier extended
+uv run ragas-eval build-dataset --output testset.jsonl --testset-size 2 --sample-size 5
 ```
+
+CLI juga menulis peringatan bila jumlah chunk jauh melebihi kebutuhan testset. Setelan
+`RAGAS_LLM_REASONING_ENABLED=false` kini juga berlaku untuk LLM generator, sehingga token
+reasoning tidak ikut terbuang saat membuat testset.
+
+### evaluate
+
+```bash
+# Fixture mode — memakai file responses
+uv run ragas-eval evaluate --dataset testset.jsonl --mode fixture --fixture testset.responses.json
+
+# Live mode — menjalankan pipeline untuk setiap pertanyaan
+uv run ragas-eval evaluate --dataset testset.jsonl --mode live
+
+# Override strategi dan kedalaman retrieval
+uv run ragas-eval evaluate --dataset testset.jsonl --mode live --strategy rrf --top-k 8
+```
+
+| Flag | Default | Keterangan |
+|---|---|---|
+| `--dataset` | *(wajib)* | Path testset JSONL |
+| `--mode` | `fixture` | `fixture` (butuh `--fixture`) atau `live` |
+| `--fixture` | — | Responses JSON `{id: {response, retrieved_contexts}}` |
+| `--run-name` | `YYYYMMDD_HHMMSS_<dataset>` | Nama dasar file laporan |
+| `--output-dir` | `src/eval/reports` | Direktori laporan |
+| `--strategy` | dari `.env` | Override `RETRIEVAL_STRATEGY` untuk run ini |
+| `--top-k` | dari `.env` | Override `RETRIEVAL_TOP_K` |
+| `--min-interval`, `--jitter`, `--max-retries`, `--backoff` | `0.3`, `0.15`, `6`, `2.0` | Kontrol pacing/retry OpenRouter (tidak dibaca dari `.env`) |
+
+`--strategy` dan `--top-k` di-set sebelum konfigurasi aplikasi dibaca, jadi keduanya benar-benar
+mengubah retrieval untuk run tersebut.
+
+### compare
+
+Menggabungkan beberapa laporan evaluasi yang sudah ada menjadi satu perbandingan:
+
+```bash
+uv run ragas-eval compare src/eval/reports/*_similarity.json src/eval/reports/*_rrf.json
+```
+
+| Flag | Default | Keterangan |
+|---|---|---|
+| `reports` | *(wajib)* | Satu atau lebih file laporan `.json` |
+| `--output-dir` | `src/eval/reports` | Direktori output perbandingan |
+| `--name` | `comparison_<timestamp>` | Nama dasar file perbandingan |
+
+Laporan dikelompokkan per dataset, lalu per strategi. Jika satu strategi punya beberapa run,
+run dengan `started_at` terbaru yang dipakai. Baseline delta adalah strategi pertama yang ada
+di urutan `similarity`, `rrf`, `reranker`.
+
+### sweep
+
+Menjalankan `evaluate --mode live` untuk setiap strategi, lalu otomatis membandingkan hasilnya:
+
+```bash
+uv run ragas-eval sweep --dataset testset.jsonl
+uv run ragas-eval sweep --dataset testset.jsonl --strategies similarity rrf
+```
+
+| Flag | Default | Keterangan |
+|---|---|---|
+| `--dataset` | *(wajib)* | Path testset JSONL |
+| `--strategies` | `similarity rrf reranker` | Strategi yang diuji |
+| `--output-dir` | `src/eval/reports` | Direktori laporan & perbandingan |
+| `--name` | `comparison_<timestamp>` | Nama dasar file perbandingan |
+
+Setiap strategi berjalan di **proses terpisah** dengan environment `RETRIEVAL_STRATEGY` yang
+berbeda. Ini diperlukan karena konfigurasi retrieval di-cache saat aplikasi mulai; menggantinya
+di dalam satu proses akan diam-diam memakai strategi pertama.
 
 ---
 
-## Membandingkan Retrieval Strategy
+## Artefak Output
 
-Untuk membandingkan `similarity` vs `rrf` vs `reranker`, set environment variable
-`RETRIEVAL_STRATEGY` sebelum menjalankan evaluasi. Laporan secara otomatis merekam strategi
-yang digunakan di field `config.retrieval_strategy`.
+Setiap `evaluate` menulis tiga file ke `--output-dir`:
 
-**CMD:**
-
-```cmd
-set RETRIEVAL_STRATEGY=similarity
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl --mode live
-
-set RETRIEVAL_STRATEGY=rrf
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl --mode live
+```text
+src/eval/reports/20260716_103042_testset.json
+src/eval/reports/20260716_103042_testset.csv
+src/eval/reports/20260716_103042_testset.md
 ```
 
-**PowerShell:**
+- **`.json`** — laporan lengkap dan machine-readable (schema di bawah)
+- **`.csv`** — satu baris per sampel, siap dibuka di spreadsheet atau `pandas`
+- **`.md`** — ringkasan agregat, breakdown per metadata, dan tabel skor per sampel
 
-```powershell
-$env:RETRIEVAL_STRATEGY = "similarity"
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl --mode live
-
-$env:RETRIEVAL_STRATEGY = "rrf"
-python scripts/run_ragas_eval.py tests/fixtures/140726_kurikulum_01.jsonl --mode live
-```
-
-Hasilnya dua file dengan timestamp berbeda di `src/eval/reports/`. Bandingkan
-`aggregate_scores` dari keduanya untuk melihat pengaruh strategi retrieval.
-
----
-
-## Dataset
-
-### Dataset yang Tersedia
-
-| File | Deskripsi |
-|---|---|
-| `tests/fixtures/140726_kurikulum_01.jsonl` | Dataset kurikulum TI Unpas |
-| `tests/fixtures/ragas_dataset_kurikulum_if_unpas.jsonl` | Dataset kurikulum IF Unpas |
-| `tests/fixtures/ragas_dataset_pedoman_kemahasiswaan.jsonl` | Dataset pedoman kemahasiswaan |
-| `tests/fixtures/ragas_dataset_15.jsonl` | Dataset campuran 15 sampel |
-| `tests/fixtures/ragas_dataset.jsonl` | Dataset utama |
-
-### Schema JSONL
-
-Setiap baris adalah satu JSON object:
+Skema laporan JSON:
 
 ```json
 {
-  "id": "ragas_q1",
-  "question": "Min, total SKS yang harus ditempuh buat lulus S1 Teknik Informatika Unpas berapa sih?",
-  "contexts": [
-    { "text": "Total 144", "is_relevant": true },
-    { "text": "Jumlah Beban Studi Semester I 19 0 0 19", "is_relevant": true }
-  ],
-  "answer": "Total SKS yang harus ditempuh adalah 144 SKS.",
-  "ground_truth": "Total beban studi untuk kurikulum Teknik Informatika Universitas Pasundan adalah 144 SKS.",
-  "metadata": {
-    "source_file": "Kurikulum Teknik Informatika Unpas 2021.pdf",
-    "difficulty": "easy",
-    "reasoning_type": "single-hop",
-    "noise_level": "low"
-  }
-}
-```
-
-| Field | Tipe | Wajib | Keterangan |
-|---|---|---|---|
-| `id` | `str` | ✅ | Identifier unik per sampel |
-| `question` | `str` | ✅ | Pertanyaan user |
-| `ground_truth` | `str` | ✅ | Jawaban referensi yang benar |
-| `answer` | `str` | ✅ untuk fixture | Jawaban kandidat yang akan di-scoring |
-| `contexts` | `list[object]` | ✅ untuk fixture | Chunk teks dengan flag relevansi |
-| `metadata.source_file` | `str` | ✅ | Nama file sumber |
-| `metadata.difficulty` | `easy\|medium\|hard` | ✅ | Tingkat kesulitan |
-| `metadata.reasoning_type` | `single-hop\|multi-hop\|comparison\|inference` | ✅ | Jenis reasoning |
-| `metadata.noise_level` | `low\|medium\|high` | ✅ | Level noise konteks |
-
-### Validasi Dataset
-
-Selalu validasi dataset sebelum dijalankan:
-
-```bash
-python scripts/build_ragas_dataset.py \
-    --validate tests/fixtures/140726_kurikulum_01.jsonl \
-    --stats
-```
-
----
-
-## Laporan Hasil
-
-Laporan disimpan sebagai JSON di `src/eval/reports/`. Contoh isi laporan:
-
-```json
-{
-  "evaluation_type": "ragas_rag_eval",
-  "evaluation_date": "2026-07-15",
-  "dataset_id": "140726_kurikulum_01.jsonl",
-  "sample_count": 15,
-  "metrics_tier": "core",
-  "aggregate_scores": {
-    "faithfulness": 0.8421,
-    "answer_relevancy": 0.9103,
-    "context_precision": 0.7654,
-    "context_recall": 0.8012
+  "schema_version": 1,
+  "run": {
+    "name": "20260716_103042_testset",
+    "started_at": "2026-07-16T10:30:42+00:00",
+    "duration_seconds": 45.4,
+    "mode": "fixture",
+    "dataset": { "name": "testset.jsonl", "path": "...", "sample_count": 2 },
+    "retrieval": { "strategy": "reranker", "top_k": 10 },
+    "models": { "judge": "deepseek/deepseek-v4-flash:exacto", "embedding": "qwen/qwen3-embedding-8b:nitro", "pipeline": "deepseek/deepseek-v4-flash:exacto" }
   },
-  "per_sample": [
+  "aggregate": {
+    "sample_count": 2,
+    "metrics": {
+      "faithfulness": { "mean": 0.5, "scored": 2 }
+    }
+  },
+  "breakdown": {
+    "question_type": {
+      "multi_doc": { "sample_count": 1, "metrics": { "faithfulness": { "mean": 1.0, "scored": 1 } } }
+    }
+  },
+  "usage": { "chat_requests": 14, "embedding_requests": 0, "request_count": 14, "prompt_tokens": 9938, "completion_tokens": 19846, "total_tokens": 29784, "cost_usd": 0.0257 },
+  "samples": [
     {
-      "id": "ragas_q1",
-      "question": "...",
-      "scores": { "faithfulness": 1.0, "answer_relevancy": 0.95 },
-      "metric_errors": {},
-      "response_preview": "Total SKS yang harus ditempuh adalah 144 SKS.",
-      "retrieved_context_count": 3,
-      "metadata": { "difficulty": "easy", "reasoning_type": "single-hop" }
+      "id": "q_001",
+      "user_input": "syarat daftar sidang skripsi apa aja?",
+      "reference": "...",
+      "response": "...",
+      "retrieved_context_count": 1,
+      "scores": { "faithfulness": 1.0 },
+      "failures": {},
+      "metadata": { "topic": "skripsi", "question_type": "multi_doc", "answerable": true }
     }
   ],
-  "openrouter_usage": {
-    "request_count": 60,
-    "prompt_tokens": 45230,
-    "completion_tokens": 3120,
-    "cost_usd_reported": 0.0312
-  },
-  "config": {
-    "evaluator_llm": "deepseek/deepseek-chat",
-    "k_eval": 5,
-    "retrieval_strategy": "rrf",
-    "mode": "fixture"
-  }
+  "artifacts": { "json": "...", "csv": "...", "markdown": "..." }
 }
 ```
+
+Breakdown yang tersedia: `question_type`, `topic`, `answerable`, `dataset_version`, dan
+`source_doc_version`. Kolom CSV mencakup `id`, `user_input`, metadata terpilih, jumlah
+context, panjang response, semua metrik, dan `failed_metrics`.
+
+`usage.cost_usd` mencakup panggilan judge dan embedding. Response generation dan query
+rewrite ikut terhitung tokennya (`chat_requests`, `total_tokens`), tetapi biaya dolarnya tidak
+dilaporkan karena klien LangChain tidak menyertakan field biaya.
+
+`compare` dan `sweep` menulis `comparison_<timestamp>.json`, `.csv` (format panjang:
+`dataset, sample_count, strategy, metric, mean, scored, best`), dan `.md` (tabel perbandingan
+plus delta terhadap baseline).
+
+---
+
+## Membandingkan Strategi Retrieval
+
+Cara tercepat adalah `sweep`. Proses ini menjalankan seluruh pipeline secara live untuk tiap
+strategi, jadi pastikan Qdrant berjalan dan dokumen sudah diindeks.
+
+```bash
+uv run ragas-eval sweep --dataset testset.jsonl
+```
+
+Hasilnya berupa tabel seperti:
+
+```text
+## testset.jsonl (7 samples)
+
+| metric | similarity | rrf | reranker | best |
+| --- | --- | --- | --- | --- |
+| context_recall | 0.5200 | 0.6800 | 0.7000 | reranker |
+| factual_correctness(mode=f1) | 0.6100 | 0.7000 | 0.7400 | reranker |
+| faithfulness | 0.7100 | 0.8000 | 0.8200 | reranker |
+```
+
+`context_recall` paling langsung mencerminkan kualitas retrieval; `faithfulness` dan
+`factual_correctness` menunjukkan efeknya pada jawaban.
+
+Kalau laporan untuk tiap strategi sudah ada (misalnya dijalankan manual dengan
+`--strategy`), cukup jalankan `compare`:
+
+```bash
+uv run ragas-eval evaluate --dataset testset.jsonl --mode live --strategy similarity
+uv run ragas-eval evaluate --dataset testset.jsonl --mode live --strategy rrf
+uv run ragas-eval compare src/eval/reports/*.json
+```
+
+Agar perbandingan adil, gunakan testset, `top_k`, dan model judge yang sama untuk semua
+strategi. Semua nilai ini tercatat di laporan pada field `run`, dan `compare` menulis
+peringatan pada laporan perbandingan bila antar-strategi ada perbedaan `top_k` atau model
+judge.
+
+---
+
+## Environment Variables
+
+| Variable | Default | Keterangan |
+|---|---|---|
+| `OPENAI_API_KEY` | — | Kunci OpenRouter yang dibaca aplikasi; **wajib** untuk `--mode live` dan `build-dataset` |
+| `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` | Base URL OpenRouter |
+| `LLM_PROVIDER` | — | Endpoint provider OpenRouter untuk LLM aplikasi (dipisah koma) |
+| `EMBEDDING_PROVIDER` | `deepinfra` | Endpoint provider OpenRouter untuk embedding |
+| `LLM_PROVIDER` | — | Batasi model utama ke endpoint provider OpenRouter tertentu (mis. `baidu/fp8`), dipisah koma; kosong memakai routing bawaan |
+| `QUERY_REWRITE_PROVIDER` | — | Batasi model query-rewrite ke endpoint provider-nya sendiri; kosong memakai routing bawaan |
+| `RAGAS_LLM_MODEL` | `LLM_MODEL` | Model judge RAGAS |
+| `RAGAS_EMBEDDING_MODEL` | `EMBEDDING_MODEL` | Model embedding untuk metrik yang butuh embedding |
+| `RAGAS_LLM_PROVIDER` | ikut `LLM_PROVIDER` | Override provider OpenRouter untuk judge & generator RAGAS |
+| `RAGAS_EMBEDDING_PROVIDER` | ikut `EMBEDDING_PROVIDER` | Override provider OpenRouter untuk embedding RAGAS |
+| `RAGAS_LLM_REASONING_*` | ikut `LLM_REASONING_*` | Kontrol reasoning khusus judge |
+| `RETRIEVAL_STRATEGY` | `similarity` | `similarity`, `rrf`, atau `reranker` |
+| `RETRIEVAL_TOP_K` | `5` | Jumlah chunk yang diambil per pertanyaan |
+| `RETRIEVAL_MAX_QUERY_VARIANTS` | `2` | Jumlah varian query per turn |
+| `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION_NAME` | — | Sumber chunk untuk live mode dan build-dataset |
+
+> Live mode menjalankan response generation lewat LLM aplikasi, yang membaca `OPENAI_API_KEY`.
+> Mengisi hanya `OPENROUTER_API_KEY` tidak cukup: evaluasi live akan berhenti dengan pesan jelas
+> daripada menilai jawaban fallback.
+
+> RAGAS memakai endpoint provider yang sama dengan pipeline. `RAGAS_LLM_PROVIDER` kosong
+> berarti ikut `LLM_PROVIDER`, dan `RAGAS_EMBEDDING_PROVIDER` kosong berarti ikut
+> `EMBEDDING_PROVIDER`. Isi salah satunya hanya kalau evaluasi memang perlu provider berbeda.
+
+---
+
+## Struktur Kode
+
+```text
+src/eval/
+├── __init__.py      # Memasang shim kompatibilitas RAGAS
+├── _compat.py       # Shim impor langchain-community
+├── models.py        # Tipe data testset, hasil, config, run context
+├── dataset.py       # Baca/validasi/tulis JSONL + statistik
+├── generate.py      # Sampling chunk + generate testset + sidecar responses
+├── openrouter.py    # Transport OpenRouter + adaptor LLM/embedding RAGAS
+├── pipeline.py      # Jalankan pipeline live atau baca file responses
+├── evaluate.py      # Tiga metrik RAGAS + scoring
+├── reporting.py     # Tulis laporan JSON/CSV/Markdown
+├── compare.py       # Perbandingan laporan + sweep strategi
+└── cli.py           # CLI `python -m src.eval`
+```
+
+Tes unit ada di `tests/unit/eval/`.
 
 ---
 
@@ -366,54 +500,55 @@ Laporan disimpan sebagai JSON di `src/eval/reports/`. Contoh isi laporan:
 
 ### `ModuleNotFoundError: No module named 'ragas'`
 
-Dependensi eval belum diinstal. Jalankan:
+Dependensi eval belum terpasang:
 
 ```bash
 uv sync --extra eval
 ```
 
-Lalu gunakan `uv run python` bukan `python` langsung, atau pastikan venv aktif.
+Pastikan menjalankan perintah lewat `uv run` atau dengan virtualenv aktif.
 
----
+### `ModuleNotFoundError: No module named 'langchain_community.chat_models.vertexai'`
 
-### Proses hang / tidak ada progress lebih dari 5 menit
+Ini penyebab `src/eval/_compat.py` ada. Impor paket `src.eval` (misalnya lewat
+`python -m src.eval`) sebelum RAGAS, atau hapus shim ini setelah RAGAS dan
+langchain-community selaras kembali.
 
-Evaluasi mungkin stuck menunggu response OpenRouter yang tidak kunjung datang.
+### Field wajib hilang saat validasi
 
-**Hentikan proses:**
+Testset harus memakai skema saat ini: `id`, `user_input`, `reference`,
+`reference_contexts`, dan `metadata`. File dengan field lama
+(`question`/`ground_truth`/`contexts`) tidak didukung dan akan gagal validasi; tulis ulang
+dalam skema baru.
 
-```cmd
-# Temukan PID
-wmic process where "name='python.exe'" get processid,commandline
+### `Fixture mode needs a response per sample`
 
-# Kill by PID
-taskkill /F /PID <pid>
+Setiap `id` di testset harus ada di file `--fixture`. Jalankan `build-dataset` atau
+`evaluate --mode live` untuk menghasilkannya.
 
-# Atau kill semua python (hati-hati jika ada proses lain)
-taskkill /F /IM python.exe
-```
+### Beberapa metrik bernilai `null`
 
-> Jika menggunakan `scripts/run_ragas_eval.py`, **Ctrl+C** sudah dikonfigurasi untuk
-> langsung menghentikan proses melalui `os._exit(1)`.
-
----
+Valid untuk kasus tertentu: jawaban kosong, judge gagal mem-parse output, atau tidak ada
+statement yang bisa diekstrak. Nilai `null` tidak dihitung dalam `mean`; detailnya ada di
+`samples[].failures` pada laporan JSON.
 
 ### `uv sync` gagal dengan `Access is denied`
 
-File `.exe` di `.venv/Scripts/` sedang digunakan oleh proses lain (biasanya server API).
-Hentikan semua proses Python terlebih dahulu, lalu ulangi perintah.
+File `.exe` di `.venv/Scripts/` sedang dipakai proses lain (biasanya server API). Hentikan
+proses tersebut, lalu ulangi.
 
----
+### Proses terasa hang
 
-### Beberapa metrik hasilnya `NaN`
+Evaluasi menunggu balasan OpenRouter. Setiap request dibatasi pacing dan di-retry otomatis
+(`--min-interval`, `--jitter`, `--max-retries`, `--backoff`). `Ctrl+C` langsung menghentikan
+proses beserta thread yang sedang menunggu.
 
-Ini normal untuk kasus tertentu:
+### Live mode gagal / tidak menemukan konteks
 
-| Metrik | Penyebab NaN |
-|---|---|
-| `faithfulness` | Tidak ada statement yang bisa diekstrak dari jawaban |
-| `context_recall` | Output LLM judge tidak bisa di-parse ke struktur yang diharapkan |
-| `answer_relevancy` | LLM judge gagal menggenerate pertanyaan evaluasi |
+Pastikan Qdrant berjalan dan koleksi berisi dokumen:
 
-NaN tidak dihitung dalam rata-rata `aggregate_scores`. Detail error per sampel tersedia
-di field `metric_errors` dalam laporan.
+```bash
+curl http://localhost:6333/collections
+```
+
+Cek juga `QDRANT_COLLECTION_NAME` dan `RETRIEVAL_TOP_K` di `.env`.

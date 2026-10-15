@@ -77,6 +77,10 @@ CMD ["uv", "run", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000
 OPENAI_API_KEY=your_key
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 LLM_MODEL=deepseek/deepseek-v4-flash:exacto
+# Optional: restrict the model to specific OpenRouter provider endpoints (e.g. baidu/fp8)
+LLM_PROVIDER=
+# Optional: restrict the query-rewrite model to its own OpenRouter provider endpoints
+QUERY_REWRITE_PROVIDER=
 LLM_REASONING_ENABLED=true
 EMBEDDING_MODEL=qwen/qwen3-embedding-8b:nitro
 VECTOR_SIZE=4096

@@ -30,6 +30,7 @@ wheels/
 
 # Testing
 .pytest_cache/
+.tmp_eval_tests/
 .coverage
 .coverage.*
 htmlcov/
@@ -57,6 +58,7 @@ Thumbs.db
 # Cache directories
 .mypy_cache/
 .ruff_cache/
+data-gym-cache/
 
 # Data
 data/raw/*
@@ -81,3 +83,8 @@ qdrant_storage/
 
 # Evaluation Reports
 src/eval/reports/
+
+.tmp_pytest/
+.tmp_probe/
+.tmp_fastembed/models--Qdrant--bm25/
+.uv_cache/

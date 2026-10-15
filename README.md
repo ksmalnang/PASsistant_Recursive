@@ -31,7 +31,7 @@ A **LangGraph-powered RAG chatbot** for Universitas Pasundan's Faculty of Engine
 - **GLM-OCR** — PDF documents are parsed page-by-page with layout-aware OCR preserving table structure
 - **Multi-query Expansion** — Queries are rewritten and expanded (including semester numeral normalization) for higher recall
 - **Guardrails** — Input injection detection + output PII masking + system prompt leak prevention
-- **RAGAS Evaluation** — Automated RAG quality assessment with Faithfulness, Answer Relevancy, Context Precision, and Context Recall
+- **RAGAS Evaluation** — Automated RAG quality assessment with Faithfulness, Context Recall, and Factual Correctness
 - **Session Management** — In-memory session tracking for continuous conversations
 - **Rate Limiting** — In-memory rolling window rate limiting per IP
 - **Multi-channel** — Interactive CLI, REST API, WebSocket streaming (with SSE resume via `Last-Event-ID`), and Telegram bot integration (including photo/image uploads)
@@ -194,21 +194,33 @@ curl -X DELETE "http://localhost:8000/documents/by-filename/Kurikulum%20IF%20202
 
 ## Evaluation
 
-Run RAGAS evaluation to measure retrieval and generation quality:
+The evaluation testset is ground truth only (`id`, `user_input`, `reference`,
+`reference_contexts`, `metadata`); the pipeline produces the answers and retrieved contexts,
+or you supply them with `--fixture`. Every subcommand is available through
+`uv run ragas-eval` (equivalently `uv run python -m src.eval`):
 
 ```bash
-# Live evaluation against current index
-uv run ragas-eval --dataset tests/fixtures/ragas_dataset.jsonl --mode live
+# Validate a testset and print its statistics
+uv run ragas-eval validate --dataset testset.jsonl
 
-# From pre-computed fixtures (no API calls for pipeline)
-uv run ragas-eval --dataset tests/fixtures/ragas_dataset.jsonl --mode fixture
-```
-*Alternatively, run evaluator via standard python module command:*
-```bash
-uv run python -m src.eval.ragas --dataset tests/fixtures/ragas_dataset.jsonl --mode live
+# Generate a testset from indexed documents; also writes testset.responses.json
+uv run ragas-eval build-dataset --output testset.jsonl --testset-size 20
+
+# Score using captured responses (fixture mode)
+uv run ragas-eval evaluate --dataset testset.jsonl --mode fixture --fixture testset.responses.json
+
+# Score the live pipeline against the current index
+uv run ragas-eval evaluate --dataset testset.jsonl --mode live
+
+# Compare retrieval strategies (one live evaluation per strategy, then a comparison)
+uv run ragas-eval sweep --dataset testset.jsonl
 ```
 
-See [docs/evaluation.md](docs/evaluation.md) for full evaluation guide.
+Every run scores Faithfulness, Context Recall, and Factual Correctness. Each `evaluate` run
+writes a report `.json`, a per-sample `.csv`, and a Markdown summary into `src/eval/reports/`;
+`compare` and `sweep` write a strategy comparison.
+
+See [docs/evaluation.md](docs/evaluation.md) for the full evaluation guide.
 
 ---
 
@@ -221,6 +233,8 @@ See [`.env.example`](.env.example) for all available variables. Key ones:
 | `OPENAI_API_KEY` | LLM provider API key (OpenRouter, OpenAI, etc.) |
 | `OPENAI_BASE_URL` | LLM provider base URL |
 | `LLM_MODEL` | Primary LLM model for responses |
+| `LLM_PROVIDER` | Restrict the primary LLM to OpenRouter provider endpoints, e.g. `baidu/fp8` (empty = default routing) |
+| `QUERY_REWRITE_PROVIDER` | Restrict the rewrite model to its own endpoints (empty = default routing) |
 | `LLM_REASONING_ENABLED` | Enable/disable provider reasoning controls |
 | `EMBEDDING_MODEL` | Embedding model for vector search |
 | `VECTOR_SIZE` | Dimensions of the embedding model |
@@ -262,7 +276,7 @@ uv run basedpyright src/
 ```bash
 bash scripts/setup.sh                  # Full project setup
 bash scripts/run_qdrant.sh             # Launch Qdrant via Docker
-python scripts/build_ragas_dataset.py  # Validate eval dataset
+uv run ragas-eval validate --dataset testset.jsonl # Validate an evaluation testset
 python scripts/run_retrieval_smoke_test.py # Smoke test search pipelines
 ```
 
@@ -284,7 +298,7 @@ src/
 │   ├── services.py          # API orchestration
 │   └── sessions.py          # In-memory session manager
 ├── config/                  # Pydantic settings and structured logging
-├── eval/                    # RAGAS evaluation framework
+├── eval/                    # RAGAS dataset generation, evaluation, and comparison
 ├── graphs/                  # LangGraph workflow definition
 ├── guardrails/              # Input/output safety filters & rate limiting
 ├── services/                # Business logic (intent, response, indexing)

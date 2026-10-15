@@ -3,7 +3,6 @@ Application configuration management using Pydantic Settings.
 Loads environment variables from .env file with validation.
 """
 
-
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Optional
@@ -30,6 +29,14 @@ class Settings(BaseSettings):
     LLM_MODEL: str = Field(
         default="deepseek/deepseek-v4-flash:exacto", description="Primary LLM model"
     )
+    LLM_PROVIDER: str = Field(
+        default="",
+        description=(
+            "Comma-separated OpenRouter provider endpoints to allow for the primary LLM, "
+            "including quantization variants (e.g. baidu/fp8). "
+            "Empty uses OpenRouter's default routing."
+        ),
+    )
     LLM_REASONING_ENABLED: bool = Field(
         default=True,
         description="Send provider reasoning controls with LLM requests when supported",
@@ -49,9 +56,24 @@ class Settings(BaseSettings):
         default="",
         description="Fast model for query rewriting (falls back to LLM_MODEL when empty)",
     )
+    QUERY_REWRITE_PROVIDER: str = Field(
+        default="",
+        description=(
+            "Comma-separated OpenRouter provider endpoints to allow for the rewrite model, "
+            "including quantization variants (e.g. deepinfra/fp8). "
+            "Empty uses OpenRouter's default routing."
+        ),
+    )
     EMBEDDING_MODEL: str = Field(
         default="qwen/qwen3-embedding-8b:nitro",
         description="Embedding model for vector search",
+    )
+    EMBEDDING_PROVIDER: str = Field(
+        default="deepinfra",
+        description=(
+            "Comma-separated OpenRouter provider endpoints to allow for embeddings, "
+            "including quantization variants. Empty uses OpenRouter's default routing."
+        ),
     )
 
     # --- Decision Model (Jev / TypeSafe) Configuration ---
@@ -89,6 +111,13 @@ class Settings(BaseSettings):
         default="",
         description="LLM model for RAGAS evaluator judge (falls back to LLM_MODEL if empty)",
     )
+    RAGAS_LLM_PROVIDER: str = Field(
+        default="",
+        description=(
+            "OpenRouter provider endpoints for the RAGAS LLM and testset generator; "
+            "empty inherits LLM_PROVIDER"
+        ),
+    )
     RAGAS_LLM_REASONING_ENABLED: Optional[bool] = Field(
         default=None,
         description="Override provider reasoning controls for RAGAS evaluator LLM only",
@@ -110,6 +139,12 @@ class Settings(BaseSettings):
     RAGAS_EMBEDDING_MODEL: str = Field(
         default="",
         description="Embedding model for RAGAS semantic similarity metrics (falls back to EMBEDDING_MODEL if empty)",
+    )
+    RAGAS_EMBEDDING_PROVIDER: str = Field(
+        default="",
+        description=(
+            "OpenRouter provider endpoints for RAGAS embeddings; empty inherits EMBEDDING_PROVIDER"
+        ),
     )
 
     # --- GLM-4 OCR Configuration (Zhipu AI) ---
