@@ -9,7 +9,7 @@ PASsistant/
 ├── data/                    # Local data used by ingestion and development
 │   └── raw/                 # Source documents before processing
 ├── docs/                    # Technical and operational documentation
-├── scripts/                 # Setup, infrastructure, dataset, and smoke-test scripts
+├── scripts/                 # Setup, infrastructure, and smoke-test scripts
 ├── src/                     # Application source code
 ├── tests/                   # Automated tests and evaluation fixtures
 │   └── fixtures/            # Reusable JSONL datasets and test data
@@ -41,6 +41,23 @@ src/
 └── utils/
 ```
 
+### `src/eval/` — Evaluation toolkit
+
+RAGAS-based dataset generation and evaluation, driven entirely through OpenRouter.
+
+- `models.py` — Dataset/result/config types shared across modules.
+- `dataset.py` — Testset reading, validation, writing, and statistics.
+- `generate.py` — Samples indexed chunks, generates Q&A with RAGAS, writes a responses sidecar.
+- `openrouter.py` — OpenRouter transport (pacing, retries, usage accounting) and the RAGAS LLM/embedding adapters.
+- `pipeline.py` — Runs the live retrieval + response pipeline or loads stored/fixture answers.
+- `evaluate.py` — Metric selection and the RAGAS scoring run.
+- `reporting.py` — Writes the JSON report, per-sample CSV, and Markdown summary.
+- `compare.py` — Aggregates reports into a strategy comparison and drives the strategy sweep.
+- `cli.py` — The `ragas-eval` / `python -m src.eval` command-line interface.
+- `_compat.py` — Import shim for RAGAS on langchain-community 0.4.x.
+
+Evaluation tests live in `tests/unit/eval/`.
+
 ### Entry points
 
 - `src/agent.py` — Main LangGraph application entry point and interactive CLI client. It also exposes the compiled graph used by LangGraph deployment.
@@ -51,7 +68,7 @@ The corresponding command-line entry points are declared in `pyproject.toml`:
 
 ```text
 uv run chatbot       # Interactive CLI
-uv run ragas-eval    # RAGAS evaluation
+uv run ragas-eval    # Evaluation toolkit (evaluate / build-dataset / compare / sweep / validate)
 ```
 
 ### `src/api/` — HTTP and streaming interfaces
@@ -180,9 +197,6 @@ Scripts are operational helpers and are not imported as part of the application 
 
 - `setup.sh` — Full local setup helper.
 - `run_qdrant.sh` — Starts Qdrant through Docker.
-- `build_ragas_dataset.py` — Builds or validates RAGAS datasets.
-- `genereate_eval_datasets.py` — Generates evaluation datasets.
-- `run_ragas_eval.py` — Runs evaluation from a script.
 - `run_retrieval_smoke_test.py` — Exercises retrieval pipelines.
 - `show_ocr_result.py` — Displays OCR output for inspection.
 - `bump_version.sh` — Updates the application version.

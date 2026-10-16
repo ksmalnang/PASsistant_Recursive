@@ -30,6 +30,7 @@ def test_unit_01_providers_return_process_wide_singleton(
             OPENAI_API_KEY="test-key",
             OPENAI_BASE_URL="https://openrouter.invalid/api/v1",
             LLM_MODEL="test-model",
+            LLM_PROVIDER="",
             LLM_REASONING_ENABLED=False,
         ),
     )
@@ -51,6 +52,7 @@ def test_unit_07_rewrite_provider_disables_reasoning(
             OPENAI_BASE_URL="https://openrouter.invalid/api/v1",
             LLM_MODEL="test-model",
             QUERY_REWRITE_MODEL="",
+            QUERY_REWRITE_PROVIDER="",
         ),
     )
     monkeypatch.setattr("src.clients.llm._rewrite_llm_instance", None)
@@ -60,6 +62,33 @@ def test_unit_07_rewrite_provider_disables_reasoning(
     assert llm is not None
     assert llm.extra_body == {"reasoning": {"enabled": False}}
     assert llm.max_tokens == REWRITE_MAX_TOKENS
+
+
+def test_unit_12_rewrite_uses_its_own_provider_restriction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The rewrite model pins its own endpoints instead of inheriting the generation pin."""
+    monkeypatch.setattr(
+        "src.clients.llm.get_settings",
+        lambda: SimpleNamespace(
+            OPENAI_API_KEY="test-key",
+            OPENAI_BASE_URL="https://openrouter.invalid/api/v1",
+            LLM_MODEL="test-generation-model",
+            LLM_PROVIDER="baidu/fp8",
+            QUERY_REWRITE_MODEL="microsoft/phi-4",
+            QUERY_REWRITE_PROVIDER="deepinfra/fp8",
+        ),
+    )
+    monkeypatch.setattr("src.clients.llm._rewrite_llm_instance", None)
+
+    llm = get_rewrite_llm()
+
+    assert llm is not None
+    assert llm.model_name == "microsoft/phi-4"
+    assert llm.extra_body == {
+        "reasoning": {"enabled": False},
+        "provider": {"only": ["deepinfra/fp8"], "allow_fallbacks": False},
+    }
 
 
 def test_unit_09_response_provider_requests_stream_usage(
@@ -76,6 +105,7 @@ def test_unit_09_response_provider_requests_stream_usage(
             OPENAI_API_KEY="test-key",
             OPENAI_BASE_URL="https://openrouter.invalid/api/v1",
             LLM_MODEL="test-model",
+            LLM_PROVIDER="",
             LLM_REASONING_ENABLED=False,
         ),
     )
@@ -86,6 +116,56 @@ def test_unit_09_response_provider_requests_stream_usage(
     assert llm is not None
     assert llm.streaming is True
     assert llm.stream_usage is True
+
+
+def test_unit_10_llm_provider_pins_openrouter_routing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A configured provider is sent as OpenRouter routing alongside reasoning."""
+    monkeypatch.setattr(
+        "src.clients.llm.get_settings",
+        lambda: SimpleNamespace(
+            OPENAI_API_KEY="test-key",
+            OPENAI_BASE_URL="https://openrouter.invalid/api/v1",
+            LLM_MODEL="test-model",
+            LLM_PROVIDER="baidu/fp8, deepinfra/fp8",
+            LLM_REASONING_ENABLED=True,
+            LLM_REASONING_EXCLUDE=True,
+            LLM_REASONING_MAX_TOKENS=None,
+            LLM_REASONING_EFFORT="medium",
+        ),
+    )
+    monkeypatch.setattr("src.clients.llm._llm_instance", None)
+
+    llm = get_llm()
+
+    assert llm is not None
+    assert llm.extra_body == {
+        "provider": {"only": ["baidu/fp8", "deepinfra/fp8"], "allow_fallbacks": False},
+        "reasoning": {"exclude": True, "effort": "medium"},
+    }
+
+
+def test_unit_11_llm_without_provider_keeps_default_routing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Leaving LLM_PROVIDER empty sends no provider routing."""
+    monkeypatch.setattr(
+        "src.clients.llm.get_settings",
+        lambda: SimpleNamespace(
+            OPENAI_API_KEY="test-key",
+            OPENAI_BASE_URL="https://openrouter.invalid/api/v1",
+            LLM_MODEL="test-model",
+            LLM_PROVIDER="",
+            LLM_REASONING_ENABLED=False,
+        ),
+    )
+    monkeypatch.setattr("src.clients.llm._llm_instance", None)
+
+    llm = get_llm()
+
+    assert llm is not None
+    assert llm.extra_body is None
 
 
 def test_unit_02_closes_are_noops_before_initialization(

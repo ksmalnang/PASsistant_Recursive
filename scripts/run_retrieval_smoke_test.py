@@ -6,7 +6,7 @@ import argparse
 import asyncio
 from pathlib import Path
 
-from src.eval.ragas_eval import load_dataset
+from src.eval.dataset import load_dataset
 from src.utils.nodes.retrieval import RetrievalNode
 from src.utils.state import AgentState
 from src.utils.tools.vector_store import VectorStoreTools
@@ -27,7 +27,7 @@ async def run(dataset_path: Path, top_k: int) -> int:
             AgentState(
                 current_intent="query_document",
                 requires_retrieval=True,
-                retrieval_query=sample.question,
+                retrieval_query=sample.user_input,
             )
         )
         results = list(updates.get("retrieved_chunks", []))[:top_k]

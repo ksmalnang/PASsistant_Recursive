@@ -38,6 +38,27 @@ def _build_reasoning_extra_body(settings: Any) -> dict[str, Any] | None:
     return {"reasoning": reasoning}
 
 
+def _apply_provider_restriction(body: dict[str, Any], configured: str) -> None:
+    """Restrict one request to the OpenRouter provider endpoints named in a setting."""
+    providers = [name.strip() for name in configured.split(",") if name.strip()]
+    if providers:
+        body["provider"] = {"only": providers, "allow_fallbacks": False}
+
+
+def _build_extra_body(settings: Any) -> dict[str, Any] | None:
+    """Merge reasoning controls with the OpenRouter provider restriction for LLM_MODEL."""
+    body = _build_reasoning_extra_body(settings) or {}
+    _apply_provider_restriction(body, settings.LLM_PROVIDER)
+    return body or None
+
+
+def _build_rewrite_extra_body(settings: Any) -> dict[str, Any]:
+    """Rewrite requests disable reasoning and honour QUERY_REWRITE_PROVIDER."""
+    body = dict(REWRITE_EXTRA_BODY)
+    _apply_provider_restriction(body, settings.QUERY_REWRITE_PROVIDER)
+    return body
+
+
 def _build_chat_model(
     settings: Any,
     *,
@@ -75,7 +96,7 @@ def get_llm() -> InvokableLLM | None:
         _llm_instance = _build_chat_model(
             settings,
             model=settings.LLM_MODEL,
-            extra_body=_build_reasoning_extra_body(settings),
+            extra_body=_build_extra_body(settings),
         )
     return _llm_instance
 
@@ -90,7 +111,7 @@ def get_rewrite_llm() -> InvokableLLM | None:
         _rewrite_llm_instance = _build_chat_model(
             settings,
             model=getattr(settings, "QUERY_REWRITE_MODEL", "") or settings.LLM_MODEL,
-            extra_body=REWRITE_EXTRA_BODY,
+            extra_body=_build_rewrite_extra_body(settings),
             temperature=0.0,
             max_tokens=REWRITE_MAX_TOKENS,
         )
@@ -107,7 +128,7 @@ def get_response_llm() -> InvokableLLM | None:
         _response_llm_instance = _build_chat_model(
             settings,
             model=settings.LLM_MODEL,
-            extra_body=_build_reasoning_extra_body(settings),
+            extra_body=_build_extra_body(settings),
             streaming=True,
         )
     return _response_llm_instance
