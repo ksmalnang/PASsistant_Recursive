@@ -69,6 +69,31 @@ flowchart LR
     Embed --> Qdrant[(Qdrant)]
 ```
 
+### OCR Cache (Reindex Without OCR)
+
+Raw per-page OCR output is persisted at ingestion time so chunking, table
+handling, and indexing can change and documents can be re-indexed without
+paying for OCR again. Each document gets one directory:
+
+    data/processed/ocr_cache/{document_id}/pages.json
+    data/processed/ocr_cache/{document_id}/meta.json
+
+- `pages.json` stores each page's layout blocks exactly as the OCR provider
+  returned them (raw table HTML, labels, and bounding boxes) plus the final
+  per-page extracted text, sorted by page index. Failed pages are kept with
+  their status and error so page order survives the batch/retry paths.
+  Markdown table conversion is lossy (rowspan/colspan are flattened), so
+  `layout_details` is the source of truth.
+- `meta.json` stores document and OCR metadata (filename, document type,
+  number of pages, raw file name, raw file SHA-256, OCR provider/model, page
+  status snapshot) and is written **last**: its presence is what marks a cache
+  entry as complete. Both files are written atomically (temp file + rename).
+
+The cache is written only by the knowledge-base ingestion path (`POST /upload`).
+A cache write failure is logged and never fails ingestion. Set
+`OCR_CACHE_ENABLED=false` to disable it. See
+[Reindexing from Cache](#7-reindexing-from-cache) below.
+
 ### Chunked Indexing with RecursiveCharacterTextSplitter
 
 Each ingested document is split into overlapping chunks using LangChain's
@@ -111,6 +136,11 @@ On each document indexing:
    (`delete_prefix("search:")`).
 2. **Per-document invalidation** — any cache entries scoped to the
    specific document ID are also removed (`delete_prefix("doc:{id}:")`).
+
+The same invalidation runs when a document is deleted
+(`DELETE /documents/by-filename/{filename}`), which also removes the OCR cache
+directory and the raw file. Pass `?keep_files=true` to keep the cache and raw
+file while still deleting vectors and cached search results.
 
 ## 3. Search Strategies
 
@@ -157,6 +187,10 @@ A custom 5-component model evaluates the final retrieved context to assign a con
 | `RERANKER_CANDIDATE_MULTIPLIER` | 6 | First-stage overfetch ratio |
 | `CHUNK_SIZE` | 1000 | Target character length per chunk |
 | `CHUNK_OVERLAP` | 200 | Character overlap between consecutive chunks |
+| `OCR_CACHE_ENABLED` | true | Persist raw per-page OCR output for reindexing |
+| `OCR_CACHE_DIR` | `DATA_DIR/processed/ocr_cache` | OCR cache location |
+| `REINDEX_JOB_TTL_SECONDS` | 86400 | TTL for async bulk reindex job records |
+| `ADMIN_API_KEY` | unset | `X-Admin-Key` value required by reindex endpoints |
 
 ## 6. Caching
 
@@ -169,3 +203,38 @@ Search results are cached in Redis with key based on:
 
 Cache is automatically invalidated on document ingestion or deletion (`delete_prefix("search:")`).
 Per-document cache entries are also cleared on re-ingestion (`delete_prefix("doc:{id}:")`).
+
+
+## 7. Reindexing from Cache
+
+Reindexing rebuilds chunks and vectors from `pages.json` and never calls OCR.
+It reuses the ingestion helper `_build_ocr_result_from_pages`, so the page
+order, the `"\n\n"` page join, and page-number offsets are identical to a fresh
+ingest. Old points for the document are deleted right before the new upsert, so
+reindexing does not create duplicates. Documents ingested before OCR caching
+existed have no cache and must be re-uploaded.
+
+By default the cached per-page text is used. With `rebuild_text` (API) or
+`--rebuild-text` (CLI), each page's text is re-derived from its cached layout
+blocks with the current table conversion; pages that yield no block text fall
+back to their cached text.
+
+The CLI and the API share one service (`src/services/reindex.py`):
+
+    uv run python scripts/reindex_from_ocr_cache.py --document-id <id>
+    uv run python scripts/reindex_from_ocr_cache.py --filename "handbook.pdf"
+    uv run python scripts/reindex_from_ocr_cache.py --all --rebuild-text
+
+API endpoints (all require `X-Admin-Key` and the chat rate limit):
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/documents/{document_id}/reindex` | Reindex one document (404 without cache, 409 when locked) |
+| POST | `/documents/reindex/by-filename/{filename}` | Reindex every cached document with that filename |
+| POST | `/documents/reindex-jobs` | Queue a bulk job (202 + `Location`; 409 when one is active) |
+| GET | `/documents/reindex-jobs/{job_id}` | Job progress and per-document results |
+| DELETE | `/documents/reindex-jobs/{job_id}` | Request cancellation |
+
+Bulk jobs run sequentially in a single process. The job record is stored in
+Redis under `reindex_job:{job_id}` with a TTL; a queued/running job whose
+heartbeat is stale is reported as `failed` with error `interrupted`.

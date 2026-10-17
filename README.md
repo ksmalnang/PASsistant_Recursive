@@ -161,17 +161,22 @@ uv run python -m src.telegram_bot.polling
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/health` | Health check (Qdrant + Redis status) |
+| `GET` | `/health` | API and dependency health |
+| `POST` | `/chat` | Chat request, optionally with turn-only file context |
+| `POST` | `/chat/stream` | Streaming chat (SSE), optionally with files |
+| `POST` | `/upload` | Upload and ingest documents into the shared index |
 | `GET` | `/documents` | List ingested documents |
-| `DELETE` | `/documents/by-filename/{filename}` | Delete a document from index |
-| `POST` | `/upload` | Upload and ingest documents |
-| `POST` | `/chat` | Send a chat message |
-| `POST` | `/chat/upload` | Chat with file attachment |
-| `POST` | `/chat/stream` | Streaming chat (SSE) |
-| `POST` | `/chat/upload/stream` | Streaming chat with file |
-| `POST` | `/telegram/webhook` | Telegram webhook receiver |
-| `GET` | `/telegram/webhook` | Telegram webhook health/status check |
-| `WS` | `/ws/{thread_id}` | WebSocket streaming |
+| `DELETE` | `/documents/by-filename/{filename}` | Delete indexed documents by filename |
+| `POST` | `/documents/{document_id}/reindex` | Reindex one document from OCR cache (admin key) |
+| `POST` | `/documents/reindex/by-filename/{filename}` | Reindex cached documents by filename (admin key) |
+| `POST` | `/documents/reindex-jobs` | Queue a bulk reindex job (admin key) |
+| `GET` | `/documents/reindex-jobs/{job_id}` | Get bulk reindex job status (admin key) |
+| `DELETE` | `/documents/reindex-jobs/{job_id}` | Cancel a bulk reindex job (admin key) |
+| `POST` | `/telegram/webhook` | Telegram webhook receiver (when enabled) |
+| `WS` | `/ws/{thread_id}` | WebSocket chat streaming |
+
+See the [API reference](docs/api.md) for request formats, response schemas,
+authentication, error handling, and examples.
 
 ---
 
@@ -189,6 +194,41 @@ curl http://localhost:8000/documents
 # Delete a specific document (re-ingest after pipeline changes)
 curl -X DELETE "http://localhost:8000/documents/by-filename/Kurikulum%20IF%202021.pdf"
 ```
+
+### OCR cache and reindexing
+
+Each ingested document stores its raw per-page OCR output under
+`data/processed/ocr_cache/{document_id}/` (`pages.json` plus a `meta.json`
+written last). The cache makes it possible to change chunking, table handling,
+or indexing and re-index without re-running OCR. `keep_files=true` deletes
+only the vectors and search cache, keeping the OCR cache and raw file.
+
+```bash
+# Reindex one document from its OCR cache
+curl -X POST "http://localhost:8000/documents/<document_id>/reindex?rebuild_text=false" \
+  -H "X-Admin-Key: $ADMIN_API_KEY"
+
+# Reindex every cached document with a filename
+curl -X POST "http://localhost:8000/documents/reindex/by-filename/Kurikulum%20IF%202021.pdf" \
+  -H "X-Admin-Key: $ADMIN_API_KEY"
+
+# Queue a bulk job (document_ids: null reindexes every cached document)
+curl -X POST http://localhost:8000/documents/reindex-jobs \
+  -H "X-Admin-Key: $ADMIN_API_KEY" -H "Content-Type: application/json" \
+  -d '{"rebuild_text": false, "document_ids": null}'
+
+# Poll job progress / request cancellation
+curl http://localhost:8000/documents/reindex-jobs/<job_id> -H "X-Admin-Key: $ADMIN_API_KEY"
+curl -X DELETE http://localhost:8000/documents/reindex-jobs/<job_id> -H "X-Admin-Key: $ADMIN_API_KEY"
+
+# Or use the CLI, which shares the same service layer
+uv run python scripts/reindex_from_ocr_cache.py --all
+uv run python scripts/reindex_from_ocr_cache.py --filename "Kurikulum IF 2021.pdf" --rebuild-text
+```
+
+Reindex endpoints require `X-Admin-Key` to match `ADMIN_API_KEY`; when
+`ADMIN_API_KEY` is unset they all return 403. Related settings:
+`OCR_CACHE_ENABLED`, `OCR_CACHE_DIR`, `REINDEX_JOB_TTL_SECONDS`.
 
 ---
 
@@ -319,6 +359,7 @@ src/
 
 | Document | Description |
 |----------|-------------|
+| [docs/api.md](docs/api.md) | API endpoints, schemas, authentication, and usage examples |
 | [docs/api-keys.md](docs/api-keys.md) | Guide to obtaining external API credentials |
 | [docs/architecture.md](docs/architecture.md) | System architecture and pipeline design |
 | [docs/retrieval-pipeline.md](docs/retrieval-pipeline.md) | Retrieval strategy and indexing details |

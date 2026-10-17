@@ -9,15 +9,23 @@ run as production code.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Sequence
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from uuid import uuid4
 
 from langchain_core.messages import HumanMessage
 
 from src.services.contracts import AgentStreamUpdate
 from src.services.response_generation import ResponseGenerationService
 from src.services.session_registry import InMemorySessionManager
-from src.utils.state import AgentState, DocumentType, DocumentUpload, ProcessingStatus
+from src.utils.state import (
+    AgentState,
+    DocumentType,
+    DocumentUpload,
+    OCRResult,
+    ProcessingStatus,
+)
 
 
 class FakeClock:
@@ -274,3 +282,109 @@ class ChatBackend:
     def last_agent(self) -> Any:
         """Return the most recently created agent double."""
         return self.agents[-1]
+
+
+def make_ocr_result(
+    *,
+    page_texts: list[str] | None = None,
+    statuses: list[str] | None = None,
+) -> OCRResult:
+    """Build a realistic multi-page OCR result for ingestion/reindex tests."""
+    texts = page_texts if page_texts is not None else ["Halo dunia", "Tabel nilai"]
+    page_statuses = statuses if statuses is not None else ["success"] * len(texts)
+    layouts = [
+        [
+            {
+                "index": 0,
+                "label": "text",
+                "bbox_2d": [0, 0, 100, 20],
+                "content": text,
+                "height": 20,
+                "width": 100,
+            }
+        ]
+        for text in texts
+    ]
+    page_results = [
+        {
+            "page_index": index,
+            "status": page_statuses[index],
+            "text_length": len(text),
+            "layout_blocks": len(layouts[index]),
+            "error": None if page_statuses[index] != "failed" else "provider error",
+        }
+        for index, text in enumerate(texts)
+    ]
+    return OCRResult(
+        text="\n\n".join(text for text in texts if text),
+        text_quality_score=1.0,
+        num_pages=len(texts),
+        layout_details=layouts,
+        parsed_pages=sum(1 for status in page_statuses if status == "success"),
+        failed_pages=[i for i, status in enumerate(page_statuses) if status == "failed"],
+        page_results=page_results,
+        ocr_warnings=[],
+        page_texts=texts,
+    )
+
+
+class FakeTextExtractor:
+    """DocumentTextExtractor double returning a fixed OCRResult and recording calls."""
+
+    def __init__(self, result: OCRResult | None = None) -> None:
+        self.result = result if result is not None else make_ocr_result()
+        self.calls: list[tuple[str, DocumentType]] = []
+
+    async def extract_text(
+        self,
+        file_path: str,
+        document_type: DocumentType = DocumentType.OTHER,
+    ) -> OCRResult:
+        self.calls.append((file_path, document_type))
+        return self.result
+
+
+class FakeUploadPreparer:
+    """DocumentUploadPreparer double that stores bytes under a temp raw directory."""
+
+    def __init__(self, raw_dir: Path) -> None:
+        self.raw_dir = raw_dir
+        self.raw_dir.mkdir(parents=True, exist_ok=True)
+
+    def save_upload(self, file_bytes: bytes, original_filename: str) -> DocumentUpload:
+        document_id = f"doc-{uuid4().hex[:8]}"
+        storage_path = self.raw_dir / f"{document_id}.pdf"
+        storage_path.write_bytes(file_bytes)
+        return DocumentUpload(
+            document_id=document_id,
+            filename=original_filename,
+            file_path=str(storage_path),
+            document_type=DocumentType.POLICY,
+            mime_type="application/pdf",
+            file_size=len(file_bytes),
+        )
+
+
+class FakeIndexer:
+    """DocumentIndexer double recording documents and replace flags."""
+
+    def __init__(self, fail_for: set[str] | None = None) -> None:
+        self.documents: list[DocumentUpload] = []
+        self.replace_flags: list[bool] = []
+        self.fail_for = fail_for or set()
+
+    async def index_document(
+        self,
+        document: DocumentUpload,
+        *,
+        replace_existing: bool = False,
+    ) -> SimpleNamespace:
+        self.documents.append(document)
+        self.replace_flags.append(replace_existing)
+        if document.document_id in self.fail_for:
+            raise RuntimeError(f"indexing exploded for {document.document_id}")
+        return SimpleNamespace(
+            chunk_count=1,
+            indexed_chars=len(document.extracted_text or ""),
+            issues=[],
+        )

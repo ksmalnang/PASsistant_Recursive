@@ -48,7 +48,7 @@ class SearchOperations:
         self,
         query: str,
         document_type: DocumentType | None = None,
-        top_k: int = 5,
+        top_k: int = 10,
         score_threshold: float = 0.2,
     ) -> list[dict]:
         """

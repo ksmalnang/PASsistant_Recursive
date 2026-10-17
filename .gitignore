@@ -63,6 +63,7 @@ data-gym-cache/
 # Data
 data/raw/*
 data/processed/*
+data/processed/ocr_cache/
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 fastembed_cache/*
@@ -85,6 +86,7 @@ qdrant_storage/
 src/eval/reports/
 
 .tmp_pytest/
+.tmp_tests/
 .tmp_probe/
 .tmp_fastembed/models--Qdrant--bm25/
 .uv_cache/

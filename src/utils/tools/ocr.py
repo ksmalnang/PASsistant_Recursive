@@ -405,9 +405,7 @@ class GLMOCRTool:
                 for page_index in range(job.page_range.start_page, job.page_range.end_page)
             ]
 
-        subrange_size = (
-            1 if job.attempt_level == "subrange" else self.FALLBACK_SUBRANGE_PAGES
-        )
+        subrange_size = 1 if job.attempt_level == "subrange" else self.FALLBACK_SUBRANGE_PAGES
         retry_results: list[OCRPageResult] = []
         for start_page in range(job.page_range.start_page, job.page_range.end_page, subrange_size):
             end_page = min(start_page + subrange_size, job.page_range.end_page)
@@ -440,9 +438,7 @@ class GLMOCRTool:
             if (data_info := getattr(response, "data_info", None)) is not None
             else None
         )
-        metadata_page_count = (
-            int(response_num_pages or 0) if job.page_range.page_count <= 1 else 0
-        )
+        metadata_page_count = int(response_num_pages or 0) if job.page_range.page_count <= 1 else 0
         page_count = max(
             job.page_range.page_count,
             len(serialized_pages),
@@ -452,11 +448,9 @@ class GLMOCRTool:
         for relative_index in range(page_count):
             page_index = job.page_range.start_page + relative_index
             page_layout = (
-                serialized_pages[relative_index]
-                if relative_index < len(serialized_pages)
-                else []
+                serialized_pages[relative_index] if relative_index < len(serialized_pages) else []
             )
-            page_text = self._text_from_layout_details(page_layout)
+            page_text = GLMOCRTool._text_from_layout_details(page_layout)
             if not page_text and relative_index == 0:
                 page_text = batch_text
             status = "success" if page_text or page_layout else "empty"
@@ -470,23 +464,23 @@ class GLMOCRTool:
             )
         return results
 
+    @classmethod
     def _build_ocr_result_from_pages(
-        self,
+        cls,
         *,
         page_results: list[OCRPageResult],
         total_pages: int | None,
     ) -> OCRResult:
         """Merge page-scoped OCR results into the public OCRResult contract."""
         result_by_page = {result.page_index: result for result in page_results}
-        inferred_total_pages = (
-            max(result_by_page) + 1 if result_by_page else total_pages
-        )
+        inferred_total_pages = max(result_by_page) + 1 if result_by_page else total_pages
         num_pages = total_pages or inferred_total_pages
         ordered_indexes = range(num_pages or 0)
 
         text_parts: list[str] = []
         layout_details: list[list[dict[str, Any]]] = []
         serializable_page_results: list[dict[str, Any]] = []
+        page_texts: list[str] = []
         failed_pages: list[int] = []
         parsed_pages = 0
 
@@ -495,38 +489,39 @@ class GLMOCRTool:
                 page_index,
                 OCRPageResult(page_index=page_index, status="skipped"),
             )
-            if page_result.status == "success" and (
-                page_result.text or page_result.layout_details
-            ):
+            if page_result.status == "success" and (page_result.text or page_result.layout_details):
                 parsed_pages += 1
             if page_result.status == "failed":
                 failed_pages.append(page_index)
             if page_result.text:
                 text_parts.append(page_result.text)
             layout_details.append(page_result.layout_details)
-            serializable_page_results.append(self._serialize_page_result(page_result))
+            page_texts.append(page_result.text)
+            serializable_page_results.append(cls._serialize_page_result(page_result))
 
         extracted_text = "\n\n".join(text_parts).strip()
         if parsed_pages == 0:
             raise ValueError("OCR extraction failed: no pages were parsed successfully")
 
-        warnings = self._build_ocr_warnings(
+        warnings = cls._build_ocr_warnings(
             parsed_pages=parsed_pages,
             num_pages=num_pages,
             failed_pages=failed_pages,
         )
         return OCRResult(
             text=extracted_text,
-            text_quality_score=self._estimate_text_quality(extracted_text),
+            text_quality_score=cls._estimate_text_quality(extracted_text),
             num_pages=num_pages,
             layout_details=layout_details or None,
             parsed_pages=parsed_pages,
             failed_pages=failed_pages,
             page_results=serializable_page_results,
             ocr_warnings=warnings,
+            page_texts=page_texts,
         )
 
-    def _serialize_page_result(self, page_result: OCRPageResult) -> dict[str, Any]:
+    @staticmethod
+    def _serialize_page_result(page_result: OCRPageResult) -> dict[str, Any]:
         """Return a JSON-friendly page OCR status record."""
         return {
             "page_index": page_result.page_index,
@@ -536,8 +531,8 @@ class GLMOCRTool:
             "error": page_result.error,
         }
 
+    @staticmethod
     def _build_ocr_warnings(
-        self,
         *,
         parsed_pages: int,
         num_pages: int | None,
@@ -546,14 +541,13 @@ class GLMOCRTool:
         """Build compact warnings for partial OCR success."""
         warnings: list[str] = []
         if num_pages is not None and parsed_pages < num_pages:
-            warnings.append(
-                f"OCR parsed {parsed_pages} of {num_pages} pages successfully."
-            )
+            warnings.append(f"OCR parsed {parsed_pages} of {num_pages} pages successfully.")
         if failed_pages:
             warnings.append(f"OCR failed for zero-based pages: {failed_pages}.")
         return warnings
 
-    def _text_from_layout_details(self, page_layout: list[dict[str, Any]]) -> str:
+    @staticmethod
+    def _text_from_layout_details(page_layout: list[dict[str, Any]]) -> str:
         """Build page text from serialized layout block content.
 
         Table-labeled blocks whose content contains HTML table markup are
@@ -567,7 +561,7 @@ class GLMOCRTool:
                 continue
             label = str(detail.get("label") or "").lower()
             if label == "table" and "<table" in raw.lower():
-                converted = self._convert_html_table_to_markdown(raw)
+                converted = GLMOCRTool._convert_html_table_to_markdown(raw)
                 if converted:
                     parts.append(converted)
             else:
@@ -600,10 +594,7 @@ class GLMOCRTool:
 
         # Build Markdown table
         col_count = max(len(row) for row in grid)
-        normalised = [
-            [row[c] if c < len(row) else "" for c in range(col_count)]
-            for row in grid
-        ]
+        normalised = [[row[c] if c < len(row) else "" for c in range(col_count)] for row in grid]
 
         lines: list[str] = []
         header = normalised[0]
@@ -656,9 +647,7 @@ class GLMOCRTool:
         if byte_count > max_bytes:
             max_mb = max_bytes // (1024 * 1024)
             actual_mb = byte_count / (1024 * 1024)
-            raise ValueError(
-                f"{label} is too large: {actual_mb:.1f} MB exceeds {max_mb} MB limit"
-            )
+            raise ValueError(f"{label} is too large: {actual_mb:.1f} MB exceeds {max_mb} MB limit")
 
     @staticmethod
     def _estimate_pdf_page_count(path: Path) -> int | None:
@@ -722,6 +711,7 @@ class GLMOCRTool:
 # Module-level helpers for HTML table → Markdown conversion
 # ---------------------------------------------------------------------------
 
+
 class _CellInfo:
     """Parsed data for a single ``<td>`` / ``<th>`` cell."""
 
@@ -765,7 +755,9 @@ class _HTMLTableParser(HTMLParser):
         tag_lower = tag.lower()
         if tag_lower in ("td", "th") and self._current_cell is not None:
             self._current_cell.text = re.sub(
-                r"\s+", " ", self._current_cell.text,
+                r"\s+",
+                " ",
+                self._current_cell.text,
             ).strip()
             if self._current_row is not None:
                 self._current_row.append(self._current_cell)
@@ -813,7 +805,4 @@ def _expand_spans(rows: list[list[_CellInfo]]) -> list[list[str]]:
             c_target += cell.colspan
 
     # Replace any remaining None with empty string
-    return [
-        [cell if cell is not None else "" for cell in row]
-        for row in grid
-    ]
+    return [[cell if cell is not None else "" for cell in row] for row in grid]

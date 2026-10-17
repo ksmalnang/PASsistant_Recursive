@@ -86,7 +86,12 @@ class DocumentRetriever(Protocol):
 class DocumentIndexer(Protocol):
     """Index a processed document into the retrieval vector store."""
 
-    async def index_document(self, document: DocumentUpload) -> Any:
+    async def index_document(
+        self,
+        document: DocumentUpload,
+        *,
+        replace_existing: bool = False,
+    ) -> Any:
         """Split, embed, and upsert document chunks."""
         ...
 
