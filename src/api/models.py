@@ -70,9 +70,7 @@ class ErrorResponse(BaseModel):
 class DependencyHealthResponse(BaseModel):
     """Health status for an external dependency."""
 
-    status: str = Field(
-        description="Dependency state such as healthy, unhealthy, or disabled"
-    )
+    status: str = Field(description="Dependency state such as healthy, unhealthy, or disabled")
     detail: str | None = Field(
         default=None,
         description="Additional dependency status detail",
@@ -135,3 +133,61 @@ class HealthResponse(BaseModel):
     environment: str = Field(description="Current environment")
     redis: DependencyHealthResponse = Field(description="Redis connectivity status")
     qdrant: DependencyHealthResponse = Field(description="Qdrant connectivity status")
+
+
+class ReindexDocumentResult(BaseModel):
+    """Per-document outcome of a reindex request or bulk job."""
+
+    document_id: str
+    filename: str
+    status: str = Field(description="reindexed | skipped_no_cache | failed")
+    chunks: int = 0
+    error: str | None = None
+
+
+class DocumentReindexResponse(BaseModel):
+    """Response for a synchronous single-document reindex."""
+
+    document_id: str
+    filename: str
+    status: str
+    chunks: int
+
+
+class ReindexJobCreateRequest(BaseModel):
+    """Request body for a bulk reindex job."""
+
+    rebuild_text: bool = Field(
+        default=False,
+        description="Re-derive page text from cached layout blocks before indexing",
+    )
+    document_ids: list[str] | None = Field(
+        default=None,
+        description="Documents to reindex; null means every document with an OCR cache",
+    )
+
+
+class ReindexJobCreateResponse(BaseModel):
+    """Accepted bulk reindex job."""
+
+    job_id: str
+    status: str
+    total: int
+
+
+class ReindexJobStatusResponse(BaseModel):
+    """Current state of a bulk reindex job."""
+
+    job_id: str
+    status: str
+    rebuild_text: bool
+    total: int
+    processed: int
+    succeeded: int
+    skipped_no_cache: int
+    failed: int
+    current_document: str | None = None
+    started_at: str | None = None
+    finished_at: str | None = None
+    error: str | None = None
+    results: list[ReindexDocumentResult] = Field(default_factory=list)

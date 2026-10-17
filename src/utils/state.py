@@ -24,6 +24,9 @@ class OCRResult(NamedTuple):
     failed_pages: Optional[list[int]] = None
     page_results: Optional[list[dict[str, Any]]] = None
     ocr_warnings: Optional[list[str]] = None
+    # Per-page extracted text aligned with page_results; transport-only and
+    # deliberately not exposed through DocumentUpload.ocr_page_status.
+    page_texts: Optional[list[str]] = None
 
 
 class DocumentType(StrEnum):

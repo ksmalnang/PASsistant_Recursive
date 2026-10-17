@@ -142,3 +142,71 @@ def build_pdf_bytes(lines: list[str], *, font_size: int = 12) -> bytes:
         f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
     ).encode("ascii")
     return bytes(buffer)
+
+
+def seed_ocr_cache(
+    cache: Any,
+    *,
+    document_id: str = "doc-0001",
+    filename: str = "handbook.pdf",
+    pages: list[Any] | None = None,
+    num_pages: int | None = None,
+) -> Any:
+    """Write a complete OCR cache entry for reindex/deletion tests."""
+    from src.services.ocr_cache import CachedPage, OCRCacheMeta
+
+    if pages is None:
+        pages = [
+            CachedPage(
+                page_index=0,
+                page=1,
+                status="success",
+                layout_details=[_text_block("Halo")],
+                extracted_text="Halo",
+            ),
+            CachedPage(
+                page_index=1,
+                page=2,
+                status="success",
+                layout_details=[_text_block("Dunia")],
+                extracted_text="Dunia",
+            ),
+        ]
+
+    page_status = [
+        {
+            "page_index": page.page_index,
+            "status": page.status,
+            "text_length": len(page.extracted_text),
+            "layout_blocks": len(page.layout_details),
+            "error": page.error,
+        }
+        for page in pages
+    ]
+    meta = OCRCacheMeta(
+        document_id=document_id,
+        filename=filename,
+        doc_title="Handbook",
+        document_type="policy",
+        file_type="application/pdf",
+        num_pages=num_pages if num_pages is not None else len(pages),
+        raw_file=f"{document_id}.pdf",
+        source_file_sha256="deadbeef",
+        ocr_provider="zhipu",
+        ocr_model="glm-ocr",
+        ocr_timestamp="2026-01-01T00:00:00+00:00",
+        ocr_page_status=page_status,
+    )
+    cache.save(meta, pages)
+    return meta
+
+
+def _text_block(content: str) -> dict[str, Any]:
+    return {
+        "index": 0,
+        "label": "text",
+        "bbox_2d": [0, 0, 100, 20],
+        "content": content,
+        "height": 20,
+        "width": 100,
+    }

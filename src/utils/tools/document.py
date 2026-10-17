@@ -270,6 +270,26 @@ class DocumentTools:
                 return True
         return False
 
+    def resolve_stored_file(self, document_id: str, raw_name: str | None = None) -> Path | None:
+        """Locate the raw file stored for a document id.
+
+        Prefers the cache metadata name, then the exact id, then the id plus
+        its original extension. Returns None when nothing matches.
+        """
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", document_id):
+            return None
+        if raw_name and Path(raw_name).name == raw_name:
+            candidate = self.raw_dir / raw_name
+            if candidate.is_file():
+                return candidate
+        exact = self.raw_dir / document_id
+        if exact.is_file():
+            return exact
+        for candidate in sorted(self.raw_dir.glob(f"{document_id}.*")):
+            if candidate.is_file():
+                return candidate
+        return None
+
     def delete_file(self, file_path: str) -> None:
         """Delete a stored file."""
         path = Path(file_path)

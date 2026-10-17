@@ -153,6 +153,24 @@ class Settings(BaseSettings):
     GLM_OCR_MODEL: str = Field(default="glm-ocr", description="GLM vision model for OCR")
     GLM_LAYOUT_MODEL: str = Field(default="glm-ocr", description="GLM model for layout parsing")
 
+    # --- OCR Cache / Reindexing ---
+    OCR_CACHE_ENABLED: bool = Field(
+        default=True,
+        description="Persist raw per-page OCR output so documents can be re-indexed without OCR",
+    )
+    OCR_CACHE_DIR: Optional[Path] = Field(
+        default=None,
+        description="Directory for OCR cache entries; defaults to processed_data_dir/ocr_cache",
+    )
+    REINDEX_JOB_TTL_SECONDS: int = Field(
+        default=86_400,
+        description="TTL for asynchronous reindex job records stored in Redis",
+    )
+    ADMIN_API_KEY: Optional[str] = Field(
+        default=None,
+        description="Shared admin key required by the reindex endpoints (X-Admin-Key header)",
+    )
+
     # --- Qdrant Vector Database ---
     QDRANT_URL: str = Field(default="http://localhost:6333")
     QDRANT_API_KEY: Optional[str] = Field(default=None)
@@ -291,6 +309,13 @@ class Settings(BaseSettings):
     def processed_data_dir(self) -> Path:
         """Path to processed data directory."""
         return self.DATA_DIR / "processed"
+
+    @property
+    def ocr_cache_dir(self) -> Path:
+        """Path to the OCR cache directory, derived from DATA_DIR when unset."""
+        if self.OCR_CACHE_DIR:
+            return self.OCR_CACHE_DIR
+        return self.processed_data_dir / "ocr_cache"
 
 
 @lru_cache

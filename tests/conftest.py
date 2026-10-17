@@ -13,7 +13,10 @@ services); guards, services, routes, and response mapping execute production cod
 
 from __future__ import annotations
 
+import shutil
+import uuid
 from collections.abc import AsyncIterator, Callable, Iterator
+from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
@@ -33,6 +36,23 @@ DEFAULT_CLIENT_HOST = "203.0.113.10"
 DEFAULT_CLIENT_PORT = 50000
 SERVER_STARTUP_TIMEOUT_SECONDS = 20.0
 SERVER_SHUTDOWN_TIMEOUT_SECONDS = 10.0
+
+
+_SCRATCH_ROOT = Path(".tmp_tests")
+
+
+@pytest.fixture
+def tmp_path() -> Iterator[Path]:
+    """Workspace-local tmp_path; the system temp dir is not writable everywhere.
+
+    The evaluation tests keep their own override under a different scratch root.
+    """
+    path = _SCRATCH_ROOT / uuid.uuid4().hex
+    path.mkdir(parents=True)
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
 
 
 @pytest.fixture

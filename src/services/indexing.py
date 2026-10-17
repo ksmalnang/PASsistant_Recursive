@@ -63,7 +63,12 @@ class DocumentIndexingService:
         self._chunk_overlap = settings.CHUNK_OVERLAP
         self._chunk_separators = list(settings.CHUNK_SEPARATORS)
 
-    async def index_document(self, document: DocumentUpload) -> IndexingResult:
+    async def index_document(
+        self,
+        document: DocumentUpload,
+        *,
+        replace_existing: bool = False,
+    ) -> IndexingResult:
         """Split, embed, and upsert a single document into the vector store.
 
         Args:
@@ -107,7 +112,11 @@ class DocumentIndexingService:
         )
 
         self._vs.ensure_collection()
+        # Chunks and embeddings are ready before old points are removed, so a
+        # failure during embedding cannot delete the previous index in place.
         points = await self._build_points(chunks, document)
+        if replace_existing:
+            self._vs.delete_document_chunks(document.document_id)
         self._upsert_points(points)
 
         self._invalidate_document_cache(document.document_id)
