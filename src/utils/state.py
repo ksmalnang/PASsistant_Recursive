@@ -13,6 +13,19 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel, ConfigDict, Field
 
 
+def keep_latest_evidence(
+    current: list[dict[str, Any]],
+    update: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Keep the newest non-empty evidence set across turns."""
+    return list(update) if update else list(current)
+
+
+def keep_latest_text(current: str | None, update: str | None) -> str | None:
+    """Keep the newest non-empty text across turns."""
+    return update if update else current
+
+
 class OCRResult(NamedTuple):
     """Structured result from an OCR text extraction call."""
 
@@ -126,6 +139,10 @@ class Citation(BaseModel):
     score: Optional[float] = Field(default=None)
     chunk_id: Optional[str] = Field(default=None)
     snippet: Optional[str] = Field(default=None)
+    formatted: Optional[str] = Field(
+        default=None,
+        description="IEEE-style reference string for display",
+    )
     is_cited: bool = Field(
         default=False,
         description="Whether this citation was referenced inline in the response text",
@@ -166,7 +183,19 @@ class AgentState(BaseModel):
 
     # --- Retrieved Context ---
     retrieved_chunks: list[dict[str, Any]] = Field(default_factory=list)
+    conversation_evidence: Annotated[list[dict[str, Any]], keep_latest_evidence] = Field(
+        default_factory=list,
+        description="Chunks that grounded the most recent retrieval turn.",
+    )
     retrieval_query: Optional[str] = Field(default=None)
+    resolved_query: Annotated[str | None, keep_latest_text] = Field(
+        default=None,
+        description="Canonical query from the most recent retrieval turn.",
+    )
+    retrieval_scope: Annotated[str | None, keep_latest_text] = Field(
+        default=None,
+        description="Document scope from the most recent retrieval turn ('all' or 'transcript').",
+    )
     retrieval_warning: Optional[str] = Field(default=None)
     quality_warning: Optional[str] = Field(default=None)
 

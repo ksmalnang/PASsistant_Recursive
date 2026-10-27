@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage
 from src.clients.llm import get_rewrite_llm
 from src.config import get_settings
 from src.services.contracts import DocumentRetriever
+from src.services.followup import JevFollowUpClassifier
 from src.utils.messages import conversation_transcript
 from src.utils.nodes.prompts import QUERY_REWRITE_PROMPT
 from src.utils.state import AgentState, DocumentType
@@ -56,6 +57,8 @@ class RetrievalNode:
         "perwalian",
         "krs",
         "aturan",
+        "cuti",
+        "beasiswa",
     )
 
     # --- Semester numeral normalisation ---
@@ -78,15 +81,45 @@ class RetrievalNode:
 
     # A rewrite only needs enough of a long pasted message to find its keywords.
     _REWRITE_INPUT_LIMIT = 500
-    _HISTORY_LIMIT = 2
+    _HISTORY_LIMIT = 6
+    _HISTORY_CHAR_LIMIT = 4000
+
+    # --- Follow-up detection ---
+    # Short, referential messages inherit the previous turn's topic and document scope.
+    _REFERENCE_WORDS: frozenset[str] = frozenset(
+        {"kalau", "kalo", "terus", "itu", "tersebut", "tadi", "sebelumnya"}
+    )
+    _REFERENCE_PHRASES: tuple[str, ...] = (
+        "di atas",
+        "yang kedua",
+        "gimana dengan",
+        "bagaimana dengan",
+        "how about",
+        "what about",
+    )
+    _FOLLOW_UP_MAX_WORDS = 8
+    _NON_POSSESSIVE_NYA: frozenset[str] = frozenset({"punya", "hanya", "nya"})
+    _PERSONAL_RECORD_TERMS: tuple[str, ...] = (
+        "nilai saya",
+        "ipk saya",
+        "ip saya",
+        "transkrip",
+        "nim",
+        "sks saya",
+        "status akademik saya",
+        "hasil studi saya",
+    )
+    _MAX_CARRIED_CHUNKS = 2
 
     def __init__(
         self,
         retriever: DocumentRetriever | None = None,
         llm_provider=get_rewrite_llm,
+        follow_up_classifier: JevFollowUpClassifier | None = None,
     ):
         self.vector_tools = retriever or VectorStoreTools()
         self._llm_provider = llm_provider
+        self._follow_up_classifier = follow_up_classifier
         self._llm = None
         settings = get_settings()
         self.top_k = settings.RETRIEVAL_TOP_K
@@ -105,12 +138,19 @@ class RetrievalNode:
         if not state.requires_retrieval or not state.retrieval_query:
             return {}
 
+        raw_query = state.retrieval_query.strip()
+        history = self._conversation_history(state)
         try:
+            follow_up = await self._resolve_follow_up(
+                raw_query, history, state.session_id
+            )
             doc_type = self._resolve_document_type(
                 state.current_intent,
-                state.retrieval_query,
+                raw_query,
+                state.retrieval_scope,
+                follow_up=follow_up,
             )
-            queries = await self._build_queries(state)
+            queries = await self._build_queries(state, history, follow_up=follow_up)
             if not queries:
                 return {
                     "retrieved_chunks": [],
@@ -131,21 +171,40 @@ class RetrievalNode:
             for query, query_results in zip(queries, query_results_list, strict=True):
                 merged_results = self._merge_results(merged_results, query_results, query)
 
+            canonical_query = (
+                queries[0]
+                if follow_up
+                else (queries[1] if len(queries) > 1 else queries[0])
+            )
             confidence, warning = self._score_retrieval_confidence(
-                query=queries[0],
+                query=canonical_query,
                 results=merged_results,
             )
+            if (
+                follow_up
+                and state.conversation_evidence
+                and not self._looks_like_policy_scope(raw_query)
+                and not self._looks_personal_record(raw_query)
+            ):
+                merged_results = self._pin_previous_evidence(
+                    merged_results, state.conversation_evidence
+                )
+            scope = doc_type.value if doc_type else "all"
             logger.info(
                 "Retrieved chunks",
                 extra={
                     "query": state.retrieval_query,
                     "queries": queries,
+                    "follow_up": follow_up,
+                    "scope": scope,
                     "results": len(merged_results),
                     "confidence": confidence,
                 },
             )
             return {
                 "retrieved_chunks": merged_results[: self.top_k],
+                "resolved_query": canonical_query,
+                "retrieval_scope": scope,
                 "requires_retrieval": False,
                 "response_confidence": confidence,
                 "retrieval_warning": warning,
@@ -158,10 +217,26 @@ class RetrievalNode:
         self,
         intent: str | None,
         query: str | None = None,
+        previous_scope: str | None = None,
+        *,
+        follow_up: bool | None = None,
     ) -> DocumentType | None:
-        """Resolve an optional document type filter from the current intent."""
+        """Resolve an optional document type filter, keeping a follow-up in its prior scope."""
+        normalized = query or ""
+        is_follow_up = (
+            self._looks_referential(normalized) if follow_up is None else follow_up
+        )
+        if (
+            previous_scope
+            and is_follow_up
+            and not self._looks_personal_record(normalized)
+            and not self._looks_like_policy_scope(normalized)
+        ):
+            if previous_scope == DocumentType.TRANSCRIPT.value:
+                return DocumentType.TRANSCRIPT
+            return None
         if intent == "query_student":
-            if self._looks_like_policy_scope(query or ""):
+            if self._looks_like_policy_scope(normalized):
                 return None
             return DocumentType.TRANSCRIPT
         return None
@@ -171,21 +246,98 @@ class RetrievalNode:
         lowered = query.lower()
         return any(term in lowered for term in self._POLICY_SCOPE_TERMS)
 
-    async def _build_queries(self, state: AgentState) -> list[str]:
-        """Build original, rewritten, and synonym-expanded retrieval queries."""
+    def _looks_personal_record(self, query: str) -> bool:
+        """Detect wording that explicitly asks for the user's own record data."""
+        lowered = query.lower()
+        return any(
+            re.search(rf"\b{re.escape(term)}", lowered)
+            for term in self._PERSONAL_RECORD_TERMS
+        )
+
+    def _looks_referential(self, query: str) -> bool:
+        """Detect a short follow-up whose subject comes from the conversation."""
+        lowered = " ".join(query.lower().split())
+        words = [word.strip(".,?!;:") for word in lowered.split()]
+        if not words or len(words) > self._FOLLOW_UP_MAX_WORDS:
+            return False
+        has_reference = any(word in self._REFERENCE_WORDS for word in words)
+        has_phrase = any(phrase in lowered for phrase in self._REFERENCE_PHRASES)
+        has_suffix = any(
+            word.endswith("nya") and word not in self._NON_POSSESSIVE_NYA
+            for word in words
+        )
+        return has_reference or has_phrase or has_suffix
+
+    def _pin_previous_evidence(
+        self,
+        current: list[dict[str, Any]],
+        previous: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Prefix a follow-up's results with the previous turn's evidence."""
+        seen = {self._result_key(chunk) for chunk in current}
+        pinned: list[dict[str, Any]] = []
+        for chunk in previous:
+            if len(pinned) >= self._MAX_CARRIED_CHUNKS:
+                break
+            if chunk.get("carried_forward"):
+                continue
+            key = self._result_key(chunk)
+            if key in seen:
+                continue
+            if float(chunk.get("final_score", chunk.get("score", 0.0)) or 0.0) < 0.0:
+                continue
+            pinned.append({**chunk, "carried_forward": True})
+            seen.add(key)
+        return pinned + current
+
+    def _conversation_history(self, state: AgentState) -> str:
+        """Render the recent conversation for Jev and the query rewriter."""
+        history = conversation_transcript(state.messages[:-1], limit=self._HISTORY_LIMIT)
+        return history[-self._HISTORY_CHAR_LIMIT :]
+
+    async def _resolve_follow_up(
+        self,
+        query: str,
+        history: str,
+        session_id: str | None,
+    ) -> bool:
+        """Ask Jev whether the message needs the previous conversation."""
+        if self._follow_up_classifier is None:
+            return self._looks_referential(query)
+        verdict = await self._follow_up_classifier.needs_previous_context(
+            query, history, session_id=session_id
+        )
+        if verdict is None:
+            return self._looks_referential(query)
+        return verdict
+
+    async def _build_queries(
+        self,
+        state: AgentState,
+        history: str,
+        *,
+        follow_up: bool,
+    ) -> list[str]:
+        """Build the query variants used by one retrieval turn."""
         original = (state.retrieval_query or "").strip()
         if not original:
             return []
         if state.current_intent != "query_document":
             return [original]
 
-        queries = [original]
-        history = conversation_transcript(state.messages[:-1], limit=self._HISTORY_LIMIT)
+        if follow_up and state.resolved_query:
+            history = f"Previous resolved query: {state.resolved_query}\n\n{history}"
         rewritten = await self._rewrite_query(original, history)
-        if rewritten and rewritten.lower() != original.lower():
-            queries.append(rewritten)
+        canonical = rewritten or original
 
-        expanded = self._expand_query(rewritten or original)
+        if follow_up:
+            queries = [canonical]
+        else:
+            queries = [original]
+            if rewritten and rewritten.lower() != original.lower():
+                queries.append(rewritten)
+
+        expanded = self._expand_query(canonical)
         if expanded and all(expanded.lower() != query.lower() for query in queries):
             queries.append(expanded)
         return queries[: self.max_query_variants]

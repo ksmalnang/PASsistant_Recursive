@@ -26,9 +26,14 @@ class ResponseContextBuilder:
     def __init__(self, top_k: int | None = None):
         self.top_k = top_k or get_settings().RETRIEVAL_TOP_K
 
-    def build(self, state: AgentState) -> str:
+    def build(
+        self,
+        state: AgentState,
+        chunks: list[dict[str, Any]] | None = None,
+    ) -> str:
         """Render current workflow state into an LLM context string."""
         context_parts: list[str] = []
+        retrieved_chunks = state.retrieved_chunks if chunks is None else chunks
 
         if state.current_intent:
             context_parts.append(f"User intent: {state.current_intent}")
@@ -39,9 +44,14 @@ class ResponseContextBuilder:
                 f"Current student: {student.full_name or 'Unknown'} (ID: {student.student_id})"
             )
 
-        if state.retrieved_chunks:
+        if retrieved_chunks:
             context_parts.append("\nRelevant document excerpts:")
-            context_parts.extend(self._build_retrieval_context(state.retrieved_chunks))
+            context_parts.extend(self._build_retrieval_context(retrieved_chunks))
+            previous = self._build_previous_evidence(
+                state.conversation_evidence, retrieved_chunks
+            )
+            if previous:
+                context_parts.extend(previous)
 
         if state.processed_documents:
             last_doc = state.processed_documents[-1]
@@ -80,15 +90,44 @@ class ResponseContextBuilder:
             if not self._is_weak_chunk(chunk)
         ][: self.top_k]
         for index, chunk in enumerate(valid_chunks, start=1):
+            citation_id = int(chunk.get("citation_id") or index)
             citation = chunk.get("filename", "unknown")
             final_score = float(chunk.get("final_score", chunk.get("score", 0.0)))
             text = str(chunk.get("text") or "")
-            section_parts = [f"[{index}] {citation} (score: {final_score:.2f})"]
+            section_parts = [f"[{citation_id}] {citation} (score: {final_score:.2f})"]
             if text:
                 section_parts.append(text[: self._CHUNK_TEXT_LIMIT])
             lines.append("\n".join(section_parts))
         lines.append("--- END RETRIEVED DOCUMENT EXCERPTS ---")
         return lines
+
+    def _build_previous_evidence(
+        self,
+        previous_chunks: list[dict[str, Any]],
+        current_chunks: list[dict[str, Any]],
+    ) -> list[str]:
+        """Render prior-turn excerpts that are not part of the current retrieval set."""
+        current_ids = {
+            str(chunk.get("chunk_id")) for chunk in current_chunks if chunk.get("chunk_id")
+        }
+        excerpts: list[str] = []
+        for chunk in previous_chunks:
+            chunk_id = chunk.get("chunk_id")
+            if chunk_id and str(chunk_id) in current_ids:
+                continue
+            text = str(chunk.get("text") or "")
+            if not text:
+                continue
+            filename = chunk.get("filename", "unknown")
+            excerpts.append(f"Previous turn - {filename}:\n{text[: self._CHUNK_TEXT_LIMIT]}")
+
+        if not excerpts:
+            return []
+        return [
+            "\n--- BEGIN PREVIOUS-TURN EVIDENCE (consistency check only; not citable) ---",
+            *excerpts,
+            "--- END PREVIOUS-TURN EVIDENCE ---",
+        ]
 
     def _is_weak_chunk(self, chunk: dict[str, Any]) -> bool:
         """Avoid exposing clearly irrelevant negative-score excerpts."""
@@ -122,6 +161,22 @@ class CitationBuilder:
     def __init__(self, limit: int | None = None):
         self.limit = limit or get_settings().RETRIEVAL_TOP_K
 
+    def with_citation_ids(
+        self,
+        retrieved_chunks: list[dict[str, Any]],
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return citable chunk copies carrying a one-based citation_id."""
+        citation_limit = limit or self.limit
+        valid_chunks = [
+            chunk for chunk in retrieved_chunks
+            if not self._is_weak_chunk(chunk)
+        ][:citation_limit]
+        return [
+            {**chunk, "citation_id": index}
+            for index, chunk in enumerate(valid_chunks, start=1)
+        ]
+
     def build(
         self,
         retrieved_chunks: list[dict[str, Any]],
@@ -129,32 +184,42 @@ class CitationBuilder:
     ) -> list[Citation]:
         """Return source citations for the top retrieved chunks."""
         citations: list[Citation] = []
-        citation_limit = limit or self.limit
-
-        valid_chunks = [
-            chunk for chunk in retrieved_chunks
-            if not self._is_weak_chunk(chunk)
-        ][: citation_limit]
-
-        for index, chunk in enumerate(valid_chunks, start=1):
+        for chunk in self.with_citation_ids(retrieved_chunks, limit):
             source_locations = self._source_locations(chunk)
-            citations.append(
-                Citation(
-                    id=index,
-                    document_id=chunk.get("document_id"),
-                    filename=chunk.get("filename"),
-                    title=chunk.get("doc_title") or chunk.get("title"),
-                    section=self._section_label(chunk),
-                    page=self._display_page(source_locations),
-                    source_locations=source_locations,
-                    score=self._score(chunk),
-                    chunk_id=chunk.get("chunk_id"),
-                    snippet=self._snippet(chunk),
-                    is_cited=False,
-                )
+            citation = Citation(
+                id=int(chunk["citation_id"]),
+                document_id=chunk.get("document_id"),
+                filename=chunk.get("filename"),
+                title=chunk.get("doc_title") or chunk.get("title"),
+                section=self._section_label(chunk),
+                page=self._display_page(source_locations),
+                source_locations=source_locations,
+                score=self._score(chunk),
+                chunk_id=chunk.get("chunk_id"),
+                snippet=self._snippet(chunk),
+                is_cited=False,
             )
+            citation.formatted = self._format_ieee(citation)
+            citations.append(citation)
 
         return citations
+
+    def _format_ieee(self, citation: Citation) -> str:
+        """Format the available citation metadata as an IEEE-style reference."""
+        title = citation.title or citation.filename or "Retrieved document"
+        stem = citation.filename.rsplit(".", 1)[0] if citation.filename else ""
+        has_source = bool(
+            citation.filename and citation.filename != title and stem != title
+        )
+        if has_source:
+            reference = f'[{citation.id}] "{title}," {citation.filename},'
+        else:
+            reference = f'[{citation.id}] "{title},"'
+        if citation.page is not None:
+            return f"{reference} p. {citation.page}."
+        if has_source:
+            return reference.rstrip(",") + "."
+        return f'[{citation.id}] "{title}."'
 
     def _is_weak_chunk(self, chunk: dict[str, Any]) -> bool:
         """Avoid exposing clearly irrelevant negative-score citations."""
@@ -253,9 +318,10 @@ class ResponseGenerationService:
     def generate(self, state: AgentState) -> dict[str, Any]:
         """Generate a response update for the workflow state."""
         try:
-            context = self._context_builder.build(state)
-            citations = self._citation_builder.build(state.retrieved_chunks)
-            response = self._invoke_response_llm(state, context)
+            cited_chunks = self._citation_builder.with_citation_ids(state.retrieved_chunks)
+            context = self._context_builder.build(state, cited_chunks)
+            citations = self._citation_builder.build(cited_chunks)
+            response = self._invoke_response_llm(state, context, cited_chunks)
             response_content, active_citations = self._process_citations(
                 content=str(response.content),
                 citations=citations,
@@ -266,6 +332,7 @@ class ResponseGenerationService:
                 "messages": [AIMessage(content=response_content)],
                 "turn_count": state.turn_count + 1,
                 "citations": active_citations,
+                "conversation_evidence": state.retrieved_chunks,
             }
         except Exception as exc:
             logger.error("Response generation failed: %s", exc)
@@ -277,28 +344,41 @@ class ResponseGenerationService:
                 "error": str(exc),
             }
 
-    def _invoke_response_llm(self, state: AgentState, context: str) -> Any:
+    def _invoke_response_llm(
+        self,
+        state: AgentState,
+        context: str,
+        chunks: list[dict[str, Any]],
+    ) -> Any:
         """Invoke the configured LLM or fall back to deterministic output."""
         if self._llm is None:
             self._llm = self._llm_provider()
 
         if self._llm is None:
-            return AIMessage(content=self._build_fallback_response(state, context))
+            return AIMessage(content=self._build_fallback_response(state, context, chunks))
 
         system_msg = SystemMessage(content=RESPONSE_SYSTEM_PROMPT.format(context=context))
         messages = [system_msg] + list(state.messages[-10:])
         return self._llm.invoke(messages)
 
-    def _build_fallback_response(self, state: AgentState, context: str) -> str:
+    def _build_fallback_response(
+        self,
+        state: AgentState,
+        context: str,
+        chunks: list[dict[str, Any]],
+    ) -> str:
         """Return a basic response when no LLM credentials are configured."""
-        if state.retrieved_chunks:
-            top_chunk = state.retrieved_chunks[0]
+        if chunks:
+            top_chunk = chunks[0]
             if state.response_confidence and state.response_confidence < 0.45:
                 return (
                     "I found some document excerpts, but they may not directly answer the question. "
                     "The indexed context looks weak or off-topic."
                 )
-            return f"Based on available documents, I found: {top_chunk['text'][:300]} [1]"
+            return (
+                f"Based on available documents, I found: "
+                f"{top_chunk['text'][:300]} [{top_chunk['citation_id']}]"
+            )
         if state.processed_documents:
             last_doc = state.processed_documents[-1]
             response = (
