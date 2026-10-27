@@ -10,3 +10,6 @@ def test_response_prompt_renders_and_documents_course_codes() -> None:
     assert "CTX" in rendered
     assert "IF21W0103" in rendered
     assert "elective" in rendered.lower()
+    assert "Cross-turn consistency" in rendered
+    assert "Previous-turn evidence" in rendered
+    assert "citation ID" in rendered

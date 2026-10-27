@@ -99,7 +99,8 @@ A successful response is a `ChatResponse`:
 
 `citations` contains source details when documents support the answer. Citation
 items may include `id`, `document_id`, `filename`, `title`, `section`, `page`,
-`source_locations`, `score`, `chunk_id`, `snippet`, and `is_cited`.
+`source_locations`, `score`, `chunk_id`, `snippet`, `formatted`, and `is_cited`.
+`formatted` is the ready-to-display IEEE-style reference string for that citation.
 
 Common responses include `400` when the input guard rejects a message, `422`
 for invalid form data, and `429` when the rate limit is exceeded.

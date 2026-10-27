@@ -64,7 +64,7 @@ def _build_chat_model(
     *,
     model: str,
     extra_body: dict[str, Any] | None,
-    temperature: float = 0.3,
+    temperature: float = 0.0,
     streaming: bool = False,
     max_tokens: int | None = None,
 ) -> ChatOpenAI:

@@ -184,3 +184,197 @@ def test_unit_context_builder_matches_citation_ids() -> None:
     assert "[2] B.pdf" in context[2]
     assert citations[1].id == 2
     assert citations[1].filename == "B.pdf"
+
+
+def test_unit_context_builder_includes_previous_turn_evidence() -> None:
+    """Prior-turn chunks are shown alongside current chunks for consistency checks."""
+    builder = ResponseContextBuilder(top_k=5)
+    state = AgentState(
+        retrieved_chunks=[
+            {
+                "chunk_id": "current",
+                "filename": "New.pdf",
+                "text": "Batas SKS 24.",
+                "final_score": 0.9,
+            }
+        ],
+        conversation_evidence=[
+            {
+                "chunk_id": "previous",
+                "filename": "Old.pdf",
+                "text": "Batas SKS 20.",
+                "final_score": 0.8,
+            }
+        ],
+    )
+
+    context = builder.build(state)
+
+    assert "PREVIOUS-TURN EVIDENCE" in context
+    assert "Batas SKS 20." in context
+    assert "Batas SKS 24." in context
+
+
+def test_unit_context_builder_deduplicates_previous_evidence() -> None:
+    """A chunk already present in the current retrieval set is not repeated."""
+    builder = ResponseContextBuilder(top_k=5)
+    chunk = {
+        "chunk_id": "same",
+        "filename": "Doc.pdf",
+        "text": "Same rule.",
+        "final_score": 0.9,
+    }
+    state = AgentState(retrieved_chunks=[chunk], conversation_evidence=[chunk])
+
+    context = builder.build(state)
+
+    assert "PREVIOUS-TURN EVIDENCE" not in context
+
+
+def test_unit_response_generation_records_evidence_for_next_turn() -> None:
+    """generate() stores the current chunks as the next turn's evidence memory."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content="Batas SKS 24 [1].")
+    chunks = [
+        {
+            "chunk_id": "c1",
+            "filename": "Doc.pdf",
+            "text": "Batas SKS 24.",
+            "score": 0.9,
+        }
+    ]
+    service = ResponseGenerationService(llm_provider=lambda: mock_llm)
+    state = AgentState(messages=[HumanMessage(content="Berapa SKS?")], retrieved_chunks=chunks)
+
+    result = service.generate(state)
+
+    assert result["conversation_evidence"] == chunks
+
+
+def test_unit_with_citation_ids_filters_and_reassigns() -> None:
+    """Citable copies get fresh one-based IDs and weak chunks are dropped."""
+    builder = CitationBuilder(limit=5)
+    chunks = [
+        {"filename": "A.pdf", "text": "A", "final_score": 0.9, "citation_id": 7},
+        {"filename": "Bad.pdf", "text": "bad", "final_score": -0.1, "citation_id": 8},
+        {"filename": "B.pdf", "text": "B", "final_score": 0.8, "citation_id": 9},
+    ]
+
+    cited = builder.with_citation_ids(chunks)
+
+    assert [chunk["citation_id"] for chunk in cited] == [1, 2]
+    assert [chunk["filename"] for chunk in cited] == ["A.pdf", "B.pdf"]
+    assert chunks[0]["citation_id"] == 7
+
+
+def test_unit_context_builder_uses_chunk_citation_ids() -> None:
+    """The rendered excerpt marker comes from the chunk's citation_id metadata."""
+    builder = ResponseContextBuilder(top_k=5)
+    chunks = [
+        {"citation_id": 2, "filename": "B.pdf", "text": "B", "final_score": 0.8},
+        {"citation_id": 1, "filename": "A.pdf", "text": "A", "final_score": 0.9},
+    ]
+
+    context = builder._build_retrieval_context(chunks)
+
+    assert "[2] B.pdf" in context[1]
+    assert "[1] A.pdf" in context[2]
+
+
+def test_unit_citation_builder_formats_ieee_reference() -> None:
+    """Citation metadata is rendered as an IEEE-style reference."""
+    builder = CitationBuilder(limit=5)
+    citations = builder.build(
+        [
+            {
+                "filename": "Pedoman_Akademik.pdf",
+                "doc_title": "Pedoman Akademik 2024",
+                "text": "Mahasiswa wajib menempuh 144 SKS.",
+                "final_score": 0.95,
+                "source_locations": [{"page": 4}],
+            }
+        ]
+    )
+
+    assert citations[0].id == 1
+    assert citations[0].formatted == (
+        '[1] "Pedoman Akademik 2024," Pedoman_Akademik.pdf, p. 5.'
+    )
+
+
+def test_unit_ieee_reference_falls_back_to_filename() -> None:
+    """A chunk without a document title still gets a usable IEEE reference."""
+    builder = CitationBuilder(limit=1)
+    citations = builder.build(
+        [{"filename": "Pedoman.pdf", "text": "Rule.", "final_score": 0.9}]
+    )
+
+    assert citations[0].formatted == '[1] "Pedoman.pdf."'
+
+
+def test_unit_ieee_reference_skips_redundant_filename() -> None:
+    """A title that already matches the filename stem is not repeated."""
+    builder = CitationBuilder(limit=1)
+    citations = builder.build(
+        [
+            {
+                "filename": "Kurikulum 2021.pdf",
+                "doc_title": "Kurikulum 2021",
+                "text": "Rule.",
+                "final_score": 0.9,
+                "source_locations": [{"page": 0}],
+            }
+        ]
+    )
+
+    assert citations[0].formatted == '[1] "Kurikulum 2021," p. 1.'
+
+
+def test_unit_generate_sends_citation_ids_to_the_llm() -> None:
+    """The LLM context and the citation objects share the assigned IDs."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content="Batas SKS 24 [1].")
+    service = ResponseGenerationService(llm_provider=lambda: mock_llm)
+    state = AgentState(
+        retrieved_chunks=[
+            {
+                "chunk_id": "a",
+                "filename": "A.pdf",
+                "doc_title": "Doc A",
+                "text": "Batas SKS 24.",
+                "final_score": 0.9,
+            },
+            {
+                "chunk_id": "b",
+                "filename": "B.pdf",
+                "doc_title": "Doc B",
+                "text": "Batas SKS 20.",
+                "final_score": 0.8,
+            },
+        ]
+    )
+
+    result = service.generate(state)
+
+    system_prompt = mock_llm.invoke.call_args[0][0][0].content
+    assert "[1] A.pdf" in system_prompt
+    assert "[2] B.pdf" in system_prompt
+    assert [citation.id for citation in result["citations"]] == [1, 2]
+    assert result["citations"][0].formatted.startswith('[1] "Doc A," A.pdf')
+
+
+def test_unit_fallback_uses_the_first_citable_citation_id() -> None:
+    """The deterministic fallback cites the first non-weak chunk."""
+    service = ResponseGenerationService(llm_provider=lambda: None)
+    state = AgentState(
+        retrieved_chunks=[
+            {"chunk_id": "bad", "filename": "Bad.pdf", "text": "weak", "score": -0.2},
+            {"chunk_id": "good", "filename": "Good.pdf", "text": "Valid rule.", "score": 0.8},
+        ]
+    )
+
+    result = service.generate(state)
+
+    assert "Valid rule." in result["draft_response"]
+    assert "[1]" in result["draft_response"]
+    assert result["citations"][0].filename == "Good.pdf"

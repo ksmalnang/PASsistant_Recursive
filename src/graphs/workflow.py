@@ -14,6 +14,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 
 from src.services.contracts import StateNode
+from src.services.followup import JevFollowUpClassifier
 from src.utils.nodes import (
     ErrorHandlerNode,
     ResponseNode,
@@ -132,7 +133,7 @@ def create_default_nodes() -> WorkflowNodes:
         router=RouterNode(),
         document_processor=get_document_processor(),
         student_handler=StudentRecordNode(),
-        retrieval=RetrievalNode(),
+        retrieval=RetrievalNode(follow_up_classifier=JevFollowUpClassifier()),
         response=ResponseNode(),
         error_handler=ErrorHandlerNode(),
     )
